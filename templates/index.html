@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LAN Music Player</title>
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .section { margin-bottom: 20px; }
+    #status, #now_playing, #player_status { font-weight: bold; margin-top: 10px; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 5px 0; }
+    .controls button { margin-right: 10px; }
+    #player { width: 0; height: 0; visibility: hidden; }
+  </style>
+</head>
+<body>
+  <h1>LAN Music Player</h1>
+
+  <div class="section" id="username_section">
+    <label for="username">Enter your name:</label>
+    <input type="text" id="username" placeholder="e.g. John" />
+    <button onclick="joinSession()">Join</button>
+  </div>
+
+  <div class="section" id="main_ui" style="display:none;">
+    <div id="status">Waiting...</div>
+    <div id="player_status">🔄 Loading player...</div>
+
+    <div class="section">
+      <input type="text" id="search_input" placeholder="Search a song" />
+      <button onclick="searchSong()">Search</button>
+      <ul id="search_results"></ul>
+    </div>
+
+    <div class="section">
+      <div id="now_playing">Now Playing: -</div>
+      <div class="controls">
+        <button onclick="togglePlayPause()">Play/Pause</button>
+        <button onclick="voteSkip()">Vote to Skip</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h3>Queue:</h3>
+      <ul id="queue_list"></ul>
+    </div>
+
+    <div class="section">
+      <h3>Users Online:</h3>
+      <ul id="user_list"></ul>
+    </div>
+  </div>
+
+  <div id="player"></div>
+
+  <script>
+    const socket = io();
+    let username = "";
+    let player;
+    let currentVideoId = null;
+    let playerReady = false;
+
+    function joinSession() {
+      username = document.getElementById('username').value.trim();
+      if (!username) return alert("Please enter a name.");
+      document.getElementById('username_section').style.display = 'none';
+      document.getElementById('main_ui').style.display = 'block';
+      socket.emit('join', { username });
+    }
+
+    function searchSong() {
+      const query = document.getElementById('search_input').value;
+      document.getElementById('status').innerText = 'Searching...';
+      socket.emit('search', query);
+    }
+
+    function addToQueue(song) {
+      socket.emit('add_to_queue', song);
+    }
+
+    function togglePlayPause() {
+      socket.emit('play_pause');
+    }
+
+    function voteSkip() {
+      socket.emit('vote_skip');
+    }
+
+    function onYouTubeIframeAPIReady() {
+      player = new YT.Player('player', {
+        height: '0', width: '0', videoId: '',
+        playerVars: { 'autoplay': 1 },
+        events: {
+          'onReady': () => {
+            playerReady = true;
+            document.getElementById('player_status').innerText = '✅ Player ready';
+            console.log('Player ready');
+          },
+          'onError': (e) => {
+            document.getElementById('player_status').innerText = '❌ Player error: ' + e.data;
+          },
+          'onStateChange': (e) => {
+            let state = e.data;
+            let statusText = '🔄 Player state: ' + {
+              '-1': 'Unstarted', '0': 'Ended', '1': 'Playing', '2': 'Paused', '3': 'Buffering', '5': 'Video cued'
+            }[state];
+            document.getElementById('player_status').innerText = statusText;
+          }
+        }
+      });
+    }
+
+    // Socket Listeners
+    socket.on('search_results', results => {
+      document.getElementById('search_results').innerHTML = '';
+      results.forEach(r => {
+        const li = document.createElement('li');
+        li.innerHTML = `${r.title} <button onclick='addToQueue(${JSON.stringify(r)})'>Queue</button>`;
+        document.getElementById('search_results').appendChild(li);
+      });
+      document.getElementById('status').innerText = 'Search complete.';
+    });
+
+    socket.on('now_playing', song => {
+      document.getElementById('now_playing').innerText = song ? `Now Playing: ${song.title}` : 'Now Playing: -';
+      if (song && song.id && playerReady) {
+        currentVideoId = song.id;
+        player.loadVideoById(currentVideoId);
+      }
+    });
+
+    socket.on('toggle_play', () => {
+      if (!player) return;
+      const state = player.getPlayerState();
+      if (state === 1) player.pauseVideo();
+      else if (state === 2 || state === 5) player.playVideo();
+    });
+
+    socket.on('queue_updated', queue => {
+      const qList = document.getElementById('queue_list');
+      qList.innerHTML = '';
+      queue.forEach(song => {
+        const li = document.createElement('li');
+        li.innerText = song.title;
+        qList.appendChild(li);
+      });
+    });
+
+    socket.on('user_list', users => {
+      const uList = document.getElementById('user_list');
+      uList.innerHTML = '';
+      users.forEach(u => {
+        const li = document.createElement('li');
+        li.innerText = u;
+        uList.appendChild(li);
+      });
+    });
+
+    socket.on('status', msg => {
+      document.getElementById('status').innerText = msg;
+    });
+  </script>
+</body>
+</html>
