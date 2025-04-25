@@ -11,29 +11,29 @@
 <body>
   <div class="wmp-frame">
     <div class="wmp-header">
-      <h1>LAN Music Player</h1>
+      <h1> YOYO Music Player</h1>
     </div>
 
     <div class="wmp-body">
       <div class="wmp-sidebar">
         <div class="tab">Now Playing</div>
-        <div class="tab">Media Guide</div>
-        <div class="tab">CD Audio</div>
-        <div class="tab">Library</div>
-        <div class="tab">Radio</div>
-        <div class="tab">Portable</div>
-        <div class="tab">Skin</div>
+        <div class="tab red">Media Guide - CS</div>
+        <div class="tab">CD Audio - CS</div>
+        <div class="tab">Library - CS</div>
+        <div class="tab">Radio - CS</div>
+        <div class="tab">Portable - CS</div>
+        <div class="tab">Skin - CS</div>
       </div>
 
       <div class="wmp-content">
         <div id="username_section">
-          <input type="text" id="username" placeholder="Enter your name...">
+          <input type="text" id="username" placeholder="Enter your pookie name...">
           <button onclick="joinSession()">Join</button>
         </div>
 
         <div id="main_ui" style="display:none;">
-          <div id="status" class="wmp-status">Waiting...</div>
-          <div id="player_status" class="wmp-status">🔄 Loading player...</div>
+          <div id="status" class="wmp-status">ठहर जा रे.....</div>
+          <div id="player_status" class="wmp-status">🔄 बस बस...</div>
 
           <div class="wmp-controls">
             <input type="text" id="search_input" placeholder="Search song...">
@@ -61,6 +61,19 @@
 
     <div id="player"></div>
   </div>
+  <div id="media-overlay" style="
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0,0,0,0.9);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+">
+  <video id="media-video" autoplay style="max-width: 90vw; max-height: 90vh;" muted playsinline></video>
+</div>
 
   <script>
     const socket = io();
@@ -161,6 +174,26 @@
     socket.on('status', msg => {
       document.getElementById('status').innerText = msg;
     });
+
+    document.querySelector('.tab.red')?.addEventListener('click', () => {
+  const video = document.getElementById('media-video');
+  const overlay = document.getElementById('media-overlay');
+
+  video.src = '1.mp4'; // Replace with your video
+  overlay.style.display = 'flex';
+
+  video.onloadedmetadata = () => {
+    video.currentTime = 19; // ⏱ Start at 19 seconds
+    video.play();
+  };
+
+  video.onended = () => {
+    overlay.style.display = 'none';
+    video.src = ''; // Clean up
+  };
+});
+
+
   </script>
 </body>
 </html>
