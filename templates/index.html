@@ -72,7 +72,7 @@
   justify-content: center;
   align-items: center;
 ">
-  <video id="media-video" autoplay style="max-width: 90vw; max-height: 90vh;" playsinline></video>
+  <video id="media-video" autoplay style="max-width: 90vw; max-height: 90vh;"  playsinline></video>
 </div>
 
   <script>
@@ -179,7 +179,7 @@
   const video = document.getElementById('media-video');
   const overlay = document.getElementById('media-overlay');
 
-  video.src = 'https://www.youtube.com/watch?v=MBDgwq7ZXeE&ab_channel=TrendingMemeAndGreenScreen'; // Replace with your video
+  video.src = '/static/1.mp4'; // Replace with your video
   overlay.style.display = 'flex';
 
   video.onloadedmetadata = () => {
