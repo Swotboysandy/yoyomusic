@@ -627,23 +627,60 @@
 </head>
 
 <body>
-  <!-- Login -->
-  <div class="login-container" id="login">
-    <div class="login-card">
+  <!-- Lobby -->
+  <div class="login-container" id="lobby">
+    <div class="login-card" style="max-width: 420px;">
       <h1>YoYo Music</h1>
-      <p>Listen together</p>
+      <p>Listen together in rooms</p>
+
       <input type="text" id="username" placeholder="Your name" maxlength="20" autocomplete="off">
-      <button class="btn btn-white" style="width:100%" onclick="join()">Join</button>
+
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 13px; color: #888; margin-bottom: 12px;">Available Rooms</div>
+        <div id="room_list" style="max-height: 200px; overflow-y: auto;">
+          <div class="empty" style="color: #666; font-size: 14px; padding: 20px 0;">Loading rooms...</div>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid #222; padding-top: 20px; margin-top: 10px;">
+        <div style="font-size: 13px; color: #888; margin-bottom: 12px;">Create New Room</div>
+        <input type="text" id="new_room_name" placeholder="Room name" maxlength="30" autocomplete="off">
+        <input type="password" id="new_room_password" placeholder="Password (optional)" maxlength="20"
+          autocomplete="off"
+          style="background: #1a1a1a; border: 2px solid #333; border-radius: 12px; color: #fff; padding: 14px 20px; width: 100%; margin-bottom: 12px; font-family: sans-serif; font-size: 16px; outline: none;">
+        <button class="btn btn-white" style="width:100%" onclick="createRoom()">Create Room</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Password Modal -->
+  <div id="password_modal"
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
+    <div class="login-card" style="max-width: 320px;">
+      <h2 style="font-size: 18px; margin-bottom: 16px;">Enter Password</h2>
+      <p id="modal_room_name" style="color: #888; margin-bottom: 16px;"></p>
+      <input type="password" id="join_password" placeholder="Room password" autocomplete="off"
+        style="background: #1a1a1a; border: 2px solid #333; border-radius: 12px; color: #fff; padding: 14px 20px; width: 100%; margin-bottom: 12px; font-family: sans-serif; font-size: 16px; outline: none;">
+      <div style="display: flex; gap: 10px;">
+        <button class="btn btn-dark" style="flex: 1;" onclick="closePasswordModal()">Cancel</button>
+        <button class="btn btn-white" style="flex: 1;" onclick="submitPassword()">Join</button>
+      </div>
     </div>
   </div>
 
   <!-- App -->
   <div class="app-container" id="app">
     <header class="header">
-      <h1>YoYo Music</h1>
-      <div class="online-count">
-        <span class="online-dot"></span>
-        <span id="user_count">0 online</span>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <h1>YoYo Music</h1>
+        <span id="room_name_display" style="color: #666; font-size: 14px; font-weight: 400;"></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="online-count">
+          <span class="online-dot"></span>
+          <span id="user_count">0 online</span>
+        </div>
+        <button class="btn btn-dark" onclick="leaveRoom()" style="padding: 8px 16px; font-size: 13px;">Exit</button>
       </div>
     </header>
 
@@ -738,16 +775,102 @@
   <script>
     const socket = io();
     let yt, ready = false, playing = false, vol = 80;
+    let currentRoomId = null;
+    let pendingRoomId = null;
 
-    function join() {
-      const name = document.getElementById('username').value.trim();
-      if (!name) return toast('Enter name');
-      document.getElementById('login').style.display = 'none';
-      document.getElementById('app').classList.add('active');
-      socket.emit('join', { username: name });
+    // Request room list on connect
+    socket.on('connect', () => {
+      socket.emit('get_rooms');
+    });
+
+    // Room list update
+    socket.on('room_list', rooms => {
+      const el = document.getElementById('room_list');
+      if (!rooms.length) {
+        el.innerHTML = '<div class="empty" style="color: #666; font-size: 14px; padding: 20px 0;">No rooms yet. Create one!</div>';
+        return;
+      }
+      el.innerHTML = rooms.map(r => `
+      <div onclick="tryJoinRoom('${r.id}', '${esc(r.name)}', ${r.has_password})" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #111; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#1a1a1a'" onmouseout="this.style.background='#111'">
+        <div>
+          <div style="font-size: 14px; font-weight: 500;">${esc(r.name)}</div>
+          <div style="font-size: 12px; color: #666;">${r.user_count} listener${r.user_count !== 1 ? 's' : ''}</div>
+        </div>
+        <div style="font-size: 16px;">${r.has_password ? '🔒' : '→'}</div>
+      </div>
+    `).join('');
+    });
+
+    function createRoom() {
+      const username = document.getElementById('username').value.trim();
+      if (!username) return toast('Enter your name first');
+
+      const name = document.getElementById('new_room_name').value.trim();
+      if (!name) return toast('Enter room name');
+
+      const password = document.getElementById('new_room_password').value;
+      socket.emit('create_room', { name, password });
     }
 
-    document.getElementById('username').onkeydown = e => { if (e.key === 'Enter') join(); };
+    socket.on('room_created', data => {
+      const username = document.getElementById('username').value.trim();
+      socket.emit('join_room', { room_id: data.id, username, password: document.getElementById('new_room_password').value });
+    });
+
+    function tryJoinRoom(roomId, roomName, hasPassword) {
+      const username = document.getElementById('username').value.trim();
+      if (!username) return toast('Enter your name first');
+
+      if (hasPassword) {
+        pendingRoomId = roomId;
+        document.getElementById('modal_room_name').textContent = roomName;
+        document.getElementById('password_modal').style.display = 'flex';
+        document.getElementById('join_password').focus();
+      } else {
+        socket.emit('join_room', { room_id: roomId, username, password: '' });
+      }
+    }
+
+    function closePasswordModal() {
+      document.getElementById('password_modal').style.display = 'none';
+      document.getElementById('join_password').value = '';
+      pendingRoomId = null;
+    }
+
+    function submitPassword() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('join_password').value;
+      socket.emit('join_room', { room_id: pendingRoomId, username, password });
+      closePasswordModal();
+    }
+
+    socket.on('room_error', msg => toast(msg));
+
+    socket.on('joined_room', data => {
+      currentRoomId = data.room_id;
+      document.getElementById('lobby').style.display = 'none';
+      document.getElementById('app').classList.add('active');
+      document.getElementById('room_name_display').textContent = '• ' + data.room_name;
+    });
+
+    function leaveRoom() {
+      socket.emit('leave_current_room');
+    }
+
+    socket.on('left_room', () => {
+      currentRoomId = null;
+      document.getElementById('app').classList.remove('active');
+      document.getElementById('lobby').style.display = 'flex';
+      document.getElementById('room_name_display').textContent = '';
+      // Reset player
+      if (yt && ready) {
+        yt.stopVideo();
+      }
+      document.getElementById('player_title').textContent = 'Not playing';
+      document.getElementById('thumb').style.display = 'none';
+      document.getElementById('queue_list').innerHTML = '<div class="empty">No songs in queue</div>';
+      document.getElementById('user_list').innerHTML = '<div class="empty">No listeners</div>';
+    });
 
     function search() {
       const q = document.getElementById('search_input').value.trim();
@@ -813,6 +936,16 @@
           document.getElementById('time_tot').textContent = fmt(t);
         }
       }, 500);
+
+      // Sync playback time to server every 2 seconds
+      setInterval(() => {
+        if (yt && ready && currentRoomId) {
+          socket.emit('sync_time', {
+            time: yt.getCurrentTime() || 0,
+            is_playing: yt.getPlayerState() === 1
+          });
+        }
+      }, 2000);
     }
 
     socket.on('search_results', r => {
@@ -839,11 +972,22 @@
         i.src = `https://img.youtube.com/vi/${s.id}/mqdefault.jpg`;
         i.style.display = 'block';
         c.innerHTML = `<div style="text-align:center"><img src="https://img.youtube.com/vi/${s.id}/mqdefault.jpg" style="width:100%;border-radius:6px;margin-bottom:8px"><div style="font-size:13px">${esc(s.title)}</div></div>`;
-        if (ready) yt.loadVideoById(s.id);
+
+        if (ready) {
+          // Sync playback position for users joining mid-song
+          const startAt = s.start_at || 0;
+          yt.loadVideoById({ videoId: s.id, startSeconds: startAt });
+
+          // If room is paused, pause after loading
+          if (s.is_playing === false) {
+            setTimeout(() => yt.pauseVideo(), 500);
+          }
+        }
       } else {
         t.textContent = 'Not playing';
         i.style.display = 'none';
         c.innerHTML = '<div class="empty">Nothing playing</div>';
+        if (yt && ready) yt.stopVideo();
       }
     });
 

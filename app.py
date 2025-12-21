@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from threading import Lock
 import yt_dlp
 import uuid
@@ -11,42 +11,162 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'yoyo-music-secret-2024'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Global state
-queue = []
-current_song = None
-users = {}
-vote_skip = set()
-history = []
+rooms = {}  # room_id -> {name, password, users, queue, current_song, vote_skip, history}
+users = {}  # sid -> {username, room_id}
 thread_lock = Lock()
+
+def create_room_data(name, password=None):
+    return {
+        'name': name,
+        'password': password,  # None means no password
+        'users': {},  # sid -> username
+        'queue': [],
+        'current_song': None,
+        'playback_time': 0,  # Current playback position in seconds
+        'is_playing': True,
+        'vote_skip': set(),
+        'history': []
+    }
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
-@socketio.on('join')
-def handle_join(data):
-    username = data.get('username', 'Anonymous')
+@socketio.on('get_rooms')
+def get_rooms():
+    """Get list of available rooms"""
+    room_list = []
+    for room_id, room in rooms.items():
+        room_list.append({
+            'id': room_id,
+            'name': room['name'],
+            'has_password': room['password'] is not None,
+            'user_count': len(room['users'])
+        })
+    emit('room_list', room_list)
+
+@socketio.on('create_room')
+def handle_create_room(data):
+    """Create a new room"""
+    room_name = data.get('name', 'My Room').strip()[:30]
+    password = data.get('password', '').strip() or None
+    
+    if not room_name:
+        emit('room_error', 'Room name required')
+        return
+    
+    room_id = str(uuid.uuid4())[:8]
+    rooms[room_id] = create_room_data(room_name, password)
+    
+    emit('room_created', {'id': room_id, 'name': room_name})
+    # Broadcast updated room list to all users in lobby
+    socketio.emit('room_list', get_room_list())
+
+def get_room_list():
+    return [{
+        'id': rid,
+        'name': r['name'],
+        'has_password': r['password'] is not None,
+        'user_count': len(r['users'])
+    } for rid, r in rooms.items()]
+
+@socketio.on('join_room')
+def handle_join_room(data):
+    """Join an existing room"""
+    room_id = data.get('room_id')
+    username = data.get('username', 'Anonymous').strip()[:20]
+    password = data.get('password', '')
+    
+    if not room_id or room_id not in rooms:
+        emit('room_error', 'Room not found')
+        return
+    
+    room = rooms[room_id]
+    
+    # Check password
+    if room['password'] and room['password'] != password:
+        emit('room_error', 'Incorrect password')
+        return
+    
     sid = request.sid
-    users[sid] = username
     
-    emit('user_list', list(users.values()), broadcast=True)
-    emit('queue_updated', queue, broadcast=True)
-    if current_song:
-        emit('now_playing', current_song)
+    # Leave any existing room first
+    if sid in users and users[sid].get('room_id'):
+        old_room_id = users[sid]['room_id']
+        leave_user_from_room(sid, old_room_id)
     
-    emit('status', f"{username} joined", broadcast=True)
+    # Join the room
+    join_room(room_id)
+    room['users'][sid] = username
+    users[sid] = {'username': username, 'room_id': room_id}
+    
+    # Send room state to the joining user
+    emit('joined_room', {
+        'room_id': room_id,
+        'room_name': room['name'],
+        'has_password': room['password'] is not None
+    })
+    
+    emit('user_list', list(room['users'].values()), room=room_id)
+    emit('queue_updated', room['queue'], room=room_id)
+    
+    # Send current song with playback position for sync
+    if room['current_song']:
+        emit('now_playing', {
+            **room['current_song'],
+            'start_at': room['playback_time'],
+            'is_playing': room['is_playing']
+        })
+    
+    emit('status', f"{username} joined", room=room_id)
+    
+    # Update lobby room list
+    socketio.emit('room_list', get_room_list())
+
+@socketio.on('leave_current_room')
+def handle_leave_room():
+    """Leave the current room"""
+    sid = request.sid
+    if sid in users and users[sid].get('room_id'):
+        room_id = users[sid]['room_id']
+        leave_user_from_room(sid, room_id)
+        emit('left_room')
+        emit('room_list', get_room_list())
+
+def leave_user_from_room(sid, room_id):
+    """Helper to remove user from room"""
+    if room_id not in rooms:
+        return
+    
+    room = rooms[room_id]
+    username = room['users'].pop(sid, 'Unknown')
+    room['vote_skip'].discard(sid)
+    leave_room(room_id)
+    
+    if sid in users:
+        users[sid]['room_id'] = None
+    
+    emit('user_list', list(room['users'].values()), room=room_id)
+    emit('status', f"{username} left", room=room_id)
+    
+    # Delete empty rooms
+    if len(room['users']) == 0:
+        del rooms[room_id]
+        socketio.emit('room_list', get_room_list())
 
 @socketio.on('disconnect')
 def handle_disconnect():
     sid = request.sid
     if sid in users:
-        left_user = users.pop(sid)
-        vote_skip.discard(sid)
-        emit('user_list', list(users.values()), broadcast=True)
-        emit('status', f"{left_user} left", broadcast=True)
+        room_id = users[sid].get('room_id')
+        if room_id:
+            leave_user_from_room(sid, room_id)
+        del users[sid]
+    socketio.emit('room_list', get_room_list())
 
 @socketio.on('search')
 def handle_search(query):
-    """Fast search - just returns results, let frontend handle playback errors"""
+    """Fast search - just returns results"""
     if not query or not query.strip():
         emit('search_results', [])
         return
@@ -72,7 +192,6 @@ def handle_search(query):
                 video_id = result.get('id')
                 title = result.get('title', 'Unknown')
                 
-                # Skip obvious non-music content
                 skip_keywords = ['live stream', 'premiere', '24/7', 'radio']
                 title_lower = title.lower()
                 if any(kw in title_lower for kw in skip_keywords):
@@ -93,66 +212,109 @@ def handle_search(query):
 
 @socketio.on('add_to_queue')
 def add_to_queue(song):
-    global queue
+    sid = request.sid
+    if sid not in users or not users[sid].get('room_id'):
+        return
+    
+    room_id = users[sid]['room_id']
+    if room_id not in rooms:
+        return
+    
+    room = rooms[room_id]
     
     if not song or not song.get('id'):
         return
     
     song['uuid'] = str(uuid.uuid4())
-    song['added_by'] = users.get(request.sid, 'Unknown')
+    song['added_by'] = room['users'].get(sid, 'Unknown')
     
-    queue.append(song)
-    emit('queue_updated', queue, broadcast=True)
-    emit('status', f"Added: {song.get('title', 'Song')[:30]}", broadcast=True)
+    room['queue'].append(song)
+    emit('queue_updated', room['queue'], room=room_id)
+    emit('status', f"Added: {song.get('title', 'Song')[:30]}", room=room_id)
     
-    if not current_song:
-        play_next_song()
+    if not room['current_song']:
+        play_next_song_in_room(room_id)
 
 @socketio.on('vote_skip')
 def vote_to_skip():
     sid = request.sid
-    vote_skip.add(sid)
+    if sid not in users or not users[sid].get('room_id'):
+        return
     
-    votes_needed = max(1, len(users) // 2 + 1)
-    current_votes = len(vote_skip)
+    room_id = users[sid]['room_id']
+    if room_id not in rooms:
+        return
+    
+    room = rooms[room_id]
+    room['vote_skip'].add(sid)
+    
+    votes_needed = max(1, len(room['users']) // 2 + 1)
+    current_votes = len(room['vote_skip'])
     
     if current_votes >= votes_needed:
-        emit('status', "Skipped", broadcast=True)
-        play_next_song()
+        emit('status', "Skipped", room=room_id)
+        play_next_song_in_room(room_id)
     else:
-        emit('status', f"Skip: {current_votes}/{votes_needed}", broadcast=True)
+        emit('status', f"Skip: {current_votes}/{votes_needed}", room=room_id)
 
 @socketio.on('play_pause')
 def play_pause():
-    emit('toggle_play', broadcast=True)
+    sid = request.sid
+    if sid not in users or not users[sid].get('room_id'):
+        return
+    
+    room_id = users[sid]['room_id']
+    if room_id in rooms:
+        rooms[room_id]['is_playing'] = not rooms[room_id]['is_playing']
+    emit('toggle_play', room=room_id)
+
+@socketio.on('sync_time')
+def sync_time(data):
+    """Update room's playback position (sent by clients periodically)"""
+    sid = request.sid
+    if sid not in users or not users[sid].get('room_id'):
+        return
+    
+    room_id = users[sid]['room_id']
+    if room_id in rooms:
+        rooms[room_id]['playback_time'] = data.get('time', 0)
+        rooms[room_id]['is_playing'] = data.get('is_playing', True)
 
 @socketio.on('song_ended')
 def song_ended():
-    play_next_song()
+    sid = request.sid
+    if sid not in users or not users[sid].get('room_id'):
+        return
+    
+    room_id = users[sid]['room_id']
+    play_next_song_in_room(room_id)
 
-def play_next_song():
-    global current_song, queue, vote_skip
+def play_next_song_in_room(room_id):
+    if room_id not in rooms:
+        return
     
-    vote_skip = set()
+    room = rooms[room_id]
+    room['vote_skip'] = set()
     
-    if current_song:
-        history.append(current_song)
-        if len(history) > 50:
-            history.pop(0)
+    if room['current_song']:
+        room['history'].append(room['current_song'])
+        if len(room['history']) > 50:
+            room['history'].pop(0)
     
-    if queue:
-        current_song = queue.pop(0)
-        socketio.emit('now_playing', current_song)
-        socketio.emit('queue_updated', queue)
-        socketio.emit('status', f"Playing: {current_song.get('title', '')[:30]}")
+    if room['queue']:
+        room['current_song'] = room['queue'].pop(0)
+        socketio.emit('now_playing', room['current_song'], room=room_id)
+        socketio.emit('queue_updated', room['queue'], room=room_id)
+        socketio.emit('status', f"Playing: {room['current_song'].get('title', '')[:30]}", room=room_id)
     else:
-        current_song = None
-        socketio.emit('now_playing', None)
-        socketio.emit('status', "Queue empty")
+        room['current_song'] = None
+        socketio.emit('now_playing', None, room=room_id)
+        socketio.emit('status', "Queue empty", room=room_id)
 
 @app.route('/health')
 def health():
-    return {'status': 'ok', 'users': len(users), 'queue': len(queue)}
+    total_users = sum(len(r['users']) for r in rooms.values())
+    return {'status': 'ok', 'rooms': len(rooms), 'users': total_users}
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
