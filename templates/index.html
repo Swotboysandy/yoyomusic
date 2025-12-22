@@ -28,6 +28,34 @@
       min-height: 100vh;
     }
 
+    /* --- Global Glass Theme --- */
+    .glass-premium {
+      background: rgba(20, 20, 20, 0.6) !important;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #333;
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
     /* Login */
     .login-container {
       display: flex;
@@ -119,6 +147,9 @@
     /* App */
     .app-container {
       display: none;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
     }
 
     .app-container.active {
@@ -131,11 +162,12 @@
       align-items: center;
       justify-content: space-between;
       padding: 16px 24px;
-      border-bottom: 1px solid #1a1a1a;
-      background: #000;
-      position: sticky;
-      top: 0;
+      /* Glass handled by .glass-premium */
+      margin-bottom: 20px;
+      position: relative;
       z-index: 100;
+      border: none;
+      background: transparent;
     }
 
     .header h1 {
@@ -206,8 +238,10 @@
 
     /* Sections */
     .section {
-      background: #0a0a0a;
-      border: 1px solid #1a1a1a;
+      background: rgba(20, 20, 20, 0.6);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 10px;
       padding: 16px;
       margin-bottom: 16px;
@@ -249,13 +283,18 @@
       align-items: center;
       gap: 12px;
       padding: 10px;
-      background: #111;
+      background: rgba(30, 30, 30, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
       border-radius: 8px;
-      transition: background 0.15s;
+      transition: all 0.2s;
     }
 
     .song-item:hover {
-      background: #181818;
+      background: rgba(40, 40, 40, 0.6);
+      border-color: rgba(255, 255, 255, 0.1);
+      transform: translateX(4px);
     }
 
     .song-thumb {
@@ -317,7 +356,10 @@
       align-items: center;
       gap: 12px;
       padding: 10px;
-      background: #111;
+      background: rgba(30, 30, 30, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
       border-radius: 8px;
     }
 
@@ -385,176 +427,331 @@
       font-size: 13px;
     }
 
-    /* Player Bar */
-    .player-bar {
+    /* --- Footer / Player Bar (Uiverse purple-quail-14) --- */
+    /* Floating Container */
+    .player-container-uiverse {
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: #0a0a0a;
-      border-top: 1px solid #1a1a1a;
-      padding: 12px 24px;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 1000;
+      width: auto;
+      pointer-events: none;
+      /* Let clicks pass through outside card */
     }
 
-    .player-content {
-      max-width: 900px;
-      margin: 0 auto;
+    .uiverse-card {
+      position: relative;
+      width: 550px;
+      height: auto;
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 0;
+      pointer-events: auto;
+      gap: 8px;
+    }
+
+    /* Music Bar (The Player Part) */
+    .music-bar {
+      position: relative;
+      width: 100%;
+      height: 65px;
+      padding: 0 1.2rem;
+      background: rgba(20, 20, 20, 0.6);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: 60px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 20px;
+      z-index: 2;
     }
 
-    .player-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .player-thumb {
-      width: 44px;
-      height: 44px;
-      background: #1a1a1a;
-      border-radius: 6px;
-      overflow: hidden;
-      flex-shrink: 0;
-    }
-
-    .player-thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
+    /* Hide unused parts */
+    .bottom-bar {
       display: none;
     }
 
-    .player-text {
-      flex: 1;
-      min-width: 0;
+    .shapes {
+      display: none;
     }
 
-    .player-title {
-      font-size: 13px;
-      font-weight: 500;
-      white-space: nowrap;
+    /* Title Area (Replaces .music square) - Now wider text area */
+    .music-info-area {
+      position: absolute;
+      left: 6px;
+      width: calc(60% - 10px);
+      height: 42px;
+      background: rgba(149, 0, 255, 0.25);
+      box-shadow: 0 8px 32px 0 #0d2626;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 15px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
       overflow: hidden;
-      text-overflow: ellipsis;
     }
 
-    .player-status {
-      font-size: 11px;
-      color: #666;
+    .uiverse-title {
+      color: #fff;
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
     }
 
-    /* Controls */
-    .player-controls {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      min-width: 140px;
+    /* Marquee inside Uiverse */
+    .marquee-wrapper-uiverse {
+      width: 100%;
+      overflow: hidden;
+      white-space: nowrap;
+      mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
     }
 
-    .ctrl-btn {
-      width: 40px;
-      height: 40px;
-      min-width: 40px;
-      min-height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: transparent;
-      border: none;
-      border-radius: 50%;
-      color: #888;
+    /* Progress Bar - Enhanced with Slider Thumb */
+    .uiverse-progress {
+      position: relative;
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      overflow: visible;
       cursor: pointer;
-      font-size: 16px;
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      padding: 0;
-      flex-shrink: 0;
+      transition: height 0.2s;
+      margin: 0 auto;
+      padding: 0 8px;
+    }
+
+    .uiverse-progress:hover {
+      height: 10px;
+    }
+
+    .uiverse-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #def92e 0%, #c0f020 100%);
+      width: 0%;
+      transition: width 0.1s linear;
+      box-shadow: 0 0 8px rgba(222, 249, 46, 0.4);
+      border-radius: 4px;
       position: relative;
     }
 
-    .ctrl-btn:hover {
-      color: #fff;
-      background: rgba(255, 255, 255, 0.05);
-    }
-
-    .ctrl-btn.main {
-      width: 48px;
-      height: 48px;
-      min-width: 48px;
-      min-height: 48px;
-      background: #fff;
-      color: #000;
-      font-size: 20px;
-      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.1);
-    }
-
-    .ctrl-btn.main:hover {
-      background: #f0f0f0;
-      transform: scale(1.05);
-    }
-
-    .ctrl-btn:active {
-      transform: scale(0.95);
-    }
-
-    /* Progress */
-    .progress-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 2;
-      max-width: 400px;
-    }
-
-    .progress-time {
-      font-size: 11px;
-      color: #555;
-      min-width: 32px;
-      font-variant-numeric: tabular-nums;
-    }
-
-    .progress-bar {
-      flex: 1;
-      height: 4px;
-      background: #222;
-      border-radius: 2px;
-      cursor: pointer;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: #fff;
-      width: 0%;
-    }
-
-    /* Volume */
-    .volume-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .volume-slider {
-      width: 70px;
-      height: 4px;
-      -webkit-appearance: none;
-      background: #222;
-      border-radius: 2px;
-      cursor: pointer;
-    }
-
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 10px;
-      height: 10px;
+    /* Slider Thumb */
+    .uiverse-progress-fill::after {
+      content: '';
+      position: absolute;
+      right: -6px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
       background: #fff;
       border-radius: 50%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      opacity: 1;
+      transition: opacity 0.2s;
+    }
+
+    .uiverse-progress:hover .uiverse-progress-fill::after {
+      opacity: 1;
+    }
+
+    /* Time Display - Below progress bar */
+    .time-display {
+      width: 100%;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.6);
+      font-family: 'Courier New', monospace;
+      padding: 4px 0 0 0;
+    }
+
+    /* Controls - Better alignment */
+    .music-control {
+      position: absolute;
+      right: 0;
+      border-radius: 30px;
+      width: 35%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+      gap: 8px;
+    }
+
+    .music-control svg {
+      cursor: pointer;
+      transition: transform 0.1s;
+      flex-shrink: 0;
+    }
+
+    .music-control svg:active {
+      transform: scale(0.9);
+    }
+
+    #play_btn_wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Bottom Bar */
+    .bottom-bar {
+      position: absolute;
+      bottom: 10px;
+      width: 100%;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      z-index: 2;
+    }
+
+    .nav-bar {
+      position: absolute;
+      left: 20px;
+      width: 70%;
+      height: 60px;
+      padding: 6px;
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 8px 32px 0 #0d2626;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-radius: 60px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      display: flex;
+      align-items: center;
+      justify-content: space-evenly;
+    }
+
+    .nav-icons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .nav-icons:hover {
+      background-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .search-btn-uiverse {
+      position: absolute;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 8px 32px 0 #0d2626;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .search-btn-uiverse:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Shapes (Background) */
+    .shapes {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      overflow: hidden;
+      border-radius: 20px;
+      pointer-events: none;
+    }
+
+    .triangle {
+      position: absolute;
+      top: 20%;
+      left: 10%;
+      width: 60px;
+      height: 60px;
+      transform: rotate(-45deg);
+      animation: move-shape 12s linear infinite;
+    }
+
+    .circle {
+      position: absolute;
+      top: 30%;
+      right: 30%;
+      width: 50px;
+      height: 50px;
+      background-color: #c436eb;
+      border-radius: 50%;
+      animation: move-shape 12s linear infinite;
+      animation-delay: 2s;
+    }
+
+    .square {
+      position: absolute;
+      bottom: 30%;
+      right: 20%;
+      width: 30px;
+      height: 30px;
+      background-color: #def92e;
+      border-radius: 8px;
+      transform: rotate(45deg);
+      animation: move-shape 12s alternate-reverse infinite;
+      animation-delay: 6s;
+    }
+
+    @keyframes move-shape {
+
+      from,
+      to {
+        transform: rotate(-45deg);
+      }
+
+      25%,
+      75% {
+        transform: translateX(20px) translateY(5px) rotate(30deg);
+      }
+
+      50% {
+        transform: translateX(40px) translateY(10px);
+      }
+    }
+
+    /* Marquee Animation Support */
+    .marquee-content {
+      display: inline-block;
+      white-space: nowrap;
+    }
+
+    .animate-marquee {
+      animation: marquee 15s linear infinite;
+    }
+
+    @keyframes marquee {
+      0% {
+        transform: translateX(0);
+      }
+
+      100% {
+        transform: translateX(-50%);
+      }
     }
 
     /* Toast */
@@ -613,6 +810,103 @@
     @media (max-width: 600px) {
       .main {
         padding: 16px;
+        padding-bottom: 200px;
+      }
+
+      .player-container-uiverse {
+        bottom: 12px !important;
+        left: 12px !important;
+        right: 12px !important;
+        width: auto !important;
+        transform: none !important;
+        max-width: 100%;
+        display: flex;
+        justify-content: center;
+      }
+
+      /* Main Glass Capsule containing EVERYTHING */
+      .uiverse-card {
+        width: 100%;
+        max-width: none;
+        padding: 12px 16px;
+        background: rgba(20, 20, 20, 0.85);
+        /* Darker/Stronger background */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        gap: 8px;
+      }
+
+      /* Remove background from inner bar */
+      .music-bar {
+        height: auto !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        backdrop-filter: none !important;
+        padding: 0 !important;
+        flex-direction: column !important;
+        gap: 4px;
+        min-height: auto !important;
+      }
+
+      /* Row 1: Title Area */
+      .music-info-area {
+        position: relative !important;
+        width: 100% !important;
+        height: 32px !important;
+        /* Compact */
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 12px !important;
+        margin-bottom: 8px;
+        padding: 0 10px !important;
+        left: auto !important;
+        top: auto !important;
+      }
+
+      .uiverse-title {
+        font-size: 13px !important;
+        text-align: center;
+        width: 100%;
+      }
+
+      /* Row 2: Controls */
+      .music-control {
+        position: relative !important;
+        width: 100% !important;
+        height: auto !important;
+        justify-content: center !important;
+        gap: 30px !important;
+        margin-bottom: 4px;
+        right: auto !important;
+        top: auto !important;
+      }
+
+      .music-control svg {
+        width: 28px !important;
+        /* Smaller, neat icons */
+        height: 28px !important;
+      }
+
+      /* Progress Bar Area */
+      .uiverse-progress {
+        height: 6px !important;
+        width: 95% !important;
+        margin-top: 4px;
+      }
+
+      .uiverse-progress-fill::after {
+        width: 18px !important;
+        /* large touch target */
+        height: 18px !important;
+        right: -9px !important;
+      }
+
+      .time-display {
+        font-size: 11px !important;
+        padding-top: 6px !important;
       }
 
       .volume-wrap {
@@ -622,78 +916,240 @@
       .progress-wrap {
         max-width: 200px;
       }
-    }
+
+      /* --- New Wow Effects --- */
+
+      /* 1. Aurora Background */
+      @keyframes aurora-movement {
+        0% {
+          background-position: 50% 50%, 50% 50%;
+        }
+
+        50% {
+          background-position: 100% 0%, 0% 100%;
+        }
+
+        100% {
+          background-position: 50% 50%, 50% 50%;
+        }
+      }
+
+      .aurora-bg {
+        background-color: #000;
+        background-image:
+          radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+          radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+          radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+        background-size: 100% 100%;
+        animation: aurora-movement 20s ease infinite alternate;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .aurora-bg::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+        pointer-events: none;
+        z-index: 1;
+      }
+
+      /* 2. Glassmorphism */
+      .glass-card {
+        background: rgba(10, 10, 10, 0.6);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        border-radius: 16px;
+      }
+
+      /* 3. Neon Buttons */
+      .neon-btn {
+        background: transparent;
+        color: #fff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.1), inset 0 0 5px rgba(255, 255, 255, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        z-index: 1;
+      }
+
+      .neon-btn:hover {
+        border-color: #fff;
+        box-shadow: 0 0 20px rgba(255, 255, 255, 0.4), inset 0 0 10px rgba(255, 255, 255, 0.2);
+        transform: translateY(-1px);
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+      }
+
+      .neon-btn.primary {
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .neon-btn.primary:hover {
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      /* 4. Glitch Text */
+      .glitch-text {
+        position: relative;
+        color: #fff;
+        font-weight: 700;
+      }
+
+      .glitch-text::before,
+      .glitch-text::after {
+        content: attr(data-text);
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      .glitch-text::before {
+        left: 2px;
+        text-shadow: -1px 0 #ff00c1;
+        clip: rect(44px, 450px, 56px, 0);
+        animation: glitch-anim 5s infinite linear alternate-reverse;
+      }
+
+      .glitch-text::after {
+        left: -2px;
+        text-shadow: -1px 0 #00fff9;
+        clip: rect(44px, 450px, 56px, 0);
+        animation: glitch-anim2 5s infinite linear alternate-reverse;
+      }
+
+      @keyframes glitch-anim {
+        0% {
+          clip: rect(12px, 9999px, 86px, 0);
+        }
+
+        100% {
+          clip: rect(65px, 9999px, 19px, 0);
+        }
+      }
+
+      @keyframes glitch-anim2 {
+        0% {
+          clip: rect(89px, 9999px, 12px, 0);
+        }
+
+        100% {
+          clip: rect(2px, 9999px, 54px, 0);
+        }
+      }
+
+      /* Canvas Background */
+      #waves-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: -1;
+        pointer-events: none;
+        opacity: 0.8;
+        /* Slightly brighter */
+      }
+
+      /* Modify existing to allow transparency */
+      .app-container {
+        background: transparent;
+        /* Let waves show through */
+        position: relative;
+        z-index: 2;
+      }
+
+      .login-container {
+        position: relative;
+        z-index: 2;
+      }
   </style>
 </head>
 
 <body>
   <!-- Lobby -->
-  <div class="login-container" id="lobby">
-    <div class="login-card" style="max-width: 420px;">
-      <h1>YoYo Music</h1>
-      <p>Listen together in rooms</p>
+  <div class="login-container aurora-bg" id="lobby">
+    <div class="login-card glass-card" style="max-width: 420px; position:relative; z-index:2;">
+      <h1 class="glitch-text" data-text="YoYo Music" onclick="triggerGlitch(this.id)" id="lobby_title">YoYo Music</h1>
+      <p style="color: rgba(255,255,255,0.7);">Listen together in rooms</p>
 
-      <input type="text" id="username" placeholder="Your name" maxlength="20" autocomplete="off">
+      <input type="text" id="username" placeholder="Your name" maxlength="20" autocomplete="off" class="glass-input">
 
       <div style="margin-bottom: 20px;">
-        <div style="font-size: 13px; color: #888; margin-bottom: 12px;">Available Rooms</div>
+        <div style="font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 12px; letter-spacing: 1px;">AVAILABLE
+          ROOMS</div>
         <div id="room_list" style="max-height: 200px; overflow-y: auto;">
-          <div class="empty" style="color: #666; font-size: 14px; padding: 20px 0;">Loading rooms...</div>
+          <div class="empty" style="color: rgba(255,255,255,0.4); font-size: 14px; padding: 20px 0;">Loading rooms...
+          </div>
         </div>
       </div>
 
-      <div style="border-top: 1px solid #222; padding-top: 20px; margin-top: 10px;">
-        <div style="font-size: 13px; color: #888; margin-bottom: 12px;">Create New Room</div>
-        <input type="text" id="new_room_name" placeholder="Room name" maxlength="30" autocomplete="off">
+      <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; margin-top: 10px;">
+        <div style="font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 12px; letter-spacing: 1px;">CREATE NEW
+          ROOM</div>
+        <input type="text" id="new_room_name" placeholder="Room name" maxlength="30" autocomplete="off"
+          class="glass-input">
         <input type="password" id="new_room_password" placeholder="Password (optional)" maxlength="20"
           autocomplete="off"
-          style="background: #1a1a1a; border: 2px solid #333; border-radius: 12px; color: #fff; padding: 14px 20px; width: 100%; margin-bottom: 12px; font-family: sans-serif; font-size: 16px; outline: none;">
-        <button class="btn btn-white" style="width:100%" onclick="createRoom()">Create Room</button>
+          style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; padding: 14px 20px; width: 100%; margin-bottom: 12px; font-family: sans-serif; font-size: 16px; outline: none; transition: all 0.2s;">
+        <button class="btn neon-btn primary" style="width:100%" onclick="createRoom()">Create Room</button>
       </div>
     </div>
   </div>
 
   <!-- Password Modal -->
   <div id="password_modal"
-    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 2000; align-items: center; justify-content: center;">
-    <div class="login-card" style="max-width: 320px;">
-      <h2 style="font-size: 18px; margin-bottom: 16px;">Enter Password</h2>
-      <p id="modal_room_name" style="color: #888; margin-bottom: 16px;"></p>
+    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center;">
+    <div class="login-card glass-card" style="max-width: 320px;">
+      <h2 style="font-size: 18px; margin-bottom: 16px; font-weight: 600;">Enter Password</h2>
+      <p id="modal_room_name" style="color: #bbb; margin-bottom: 16px;"></p>
       <input type="password" id="join_password" placeholder="Room password" autocomplete="off"
-        style="background: #1a1a1a; border: 2px solid #333; border-radius: 12px; color: #fff; padding: 14px 20px; width: 100%; margin-bottom: 12px; font-family: sans-serif; font-size: 16px; outline: none;">
+        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; padding: 14px 20px; width: 100%; margin-bottom: 12px; font-family: sans-serif; font-size: 16px; outline: none;">
       <div style="display: flex; gap: 10px;">
-        <button class="btn btn-dark" style="flex: 1;" onclick="closePasswordModal()">Cancel</button>
-        <button class="btn btn-white" style="flex: 1;" onclick="submitPassword()">Join</button>
+        <button class="btn neon-btn" style="flex: 1;" onclick="closePasswordModal()">Cancel</button>
+        <button class="btn neon-btn primary" style="flex: 1;" onclick="submitPassword()">Join</button>
       </div>
     </div>
   </div>
 
   <!-- App -->
   <div class="app-container" id="app">
-    <header class="header">
+    <!-- <canvas id="waves-canvas"></canvas> -->
+    <header class="header glass-premium">
       <div style="display: flex; align-items: center; gap: 12px;">
-        <h1>YoYo Music</h1>
-        <span id="room_name_display" style="color: #666; font-size: 14px; font-weight: 400;"></span>
+        <h1 class="glitch-text" data-text="YoYo Music" style="font-size: 20px;">YoYo Music</h1>
+        <span id="room_name_display" style="color: #ccc; font-size: 14px; font-weight: 400;"></span>
       </div>
       <div style="display: flex; align-items: center; gap: 16px;">
         <div class="online-count">
           <span class="online-dot"></span>
           <span id="user_count">0 online</span>
         </div>
-        <button class="btn btn-dark" onclick="leaveRoom()" style="padding: 8px 16px; font-size: 13px;">Exit</button>
+        <button class="btn neon-btn" onclick="leaveRoom()" style="padding: 8px 16px; font-size: 13px;">Exit</button>
       </div>
     </header>
 
     <main class="main">
-      <div class="search-bar">
+      <div class="search-bar glass-premium"
+        style="padding: 14px; margin-bottom: 24px; display: flex; align-items: center; gap: 10px;">
         <input type="text" id="search_input" placeholder="Search for songs..."
-          onkeydown="if(event.key==='Enter')search()" autocomplete="off">
-        <button class="btn btn-dark" onclick="search()">Search</button>
+          onkeydown="if(event.key==='Enter')search()" autocomplete="off"
+          style="border:none; background: transparent; margin-bottom: 0;">
+        <button class="btn neon-btn primary" onclick="search()">Search</button>
       </div>
 
       <div class="grid">
         <div class="left">
-          <div class="section" id="search_section" style="display:none">
+          <div class="section glass-premium" id="search_section" style="display:none; padding: 20px;">
             <div class="section-header">
               <span class="section-title">Search Results</span>
               <button class="btn btn-dark" style="padding:6px 12px;font-size:12px"
@@ -702,7 +1158,7 @@
             <div class="song-list" id="search_results"></div>
           </div>
 
-          <div class="section">
+          <div class="section glass-premium" style="padding: 20px;">
             <div class="section-header">
               <span class="section-title">Queue</span>
               <span class="section-count" id="queue_count">0 songs</span>
@@ -714,7 +1170,7 @@
         </div>
 
         <div class="right">
-          <div class="section">
+          <div class="section glass-premium" style="padding: 20px;">
             <div class="section-header">
               <span class="section-title">Listeners</span>
             </div>
@@ -735,36 +1191,51 @@
       </div>
     </main>
 
-    <div class="player-bar">
-      <div class="player-content">
-        <div class="player-info">
-          <div class="player-thumb">
-            <img id="thumb" src="" alt="">
+    <!-- Uiverse Player Structure -->
+    <div class="player-container-uiverse">
+      <div class="uiverse-card">
+        <!-- Music Bar -->
+        <div class="music-bar">
+          <!-- Title Area -->
+          <div class="music-info-area" id="player_title_container">
+            <div class="uiverse-title">
+              <span id="player_title">Not playing</span>
+            </div>
           </div>
-          <div class="player-text">
-            <div class="player-title" id="player_title">Not playing</div>
-            <div class="player-status" id="player_status">Ready</div>
+
+          <!-- Hidden status for JS -->
+          <span id="player_status" style="display:none"></span>
+
+          <!-- Controls -->
+          <div class="music-control">
+            <!-- Play Button (Wrapper for JS to toggle) -->
+            <div id="play_btn_wrapper" style="cursor: pointer;" onclick="toggle()">
+              <!-- Default is Play -->
+              <svg id="play_icon_svg" stroke="#ffffff" fill="#cccccc" viewBox="0 0 24 24" height="24px" width="24px">
+                <path d="M8 5v14l11-7z" fill="#ffffff"></path>
+              </svg>
+            </div>
+            <!-- Next Button (Vote) -->
+            <svg onclick="vote()" viewBox="0 0 24 24" height="24px" width="24px" fill="#ffffff"
+              style="cursor: pointer;">
+              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"></path>
+            </svg>
           </div>
         </div>
 
-        <div class="player-controls">
-          <button class="ctrl-btn" onclick="vote()">⏭</button>
-          <button class="ctrl-btn main" id="play_btn" onclick="toggle()">▶</button>
-          <button class="ctrl-btn" onclick="vote()">👎</button>
+        <!-- Progress Bar (Outside music-bar) -->
+        <div class="uiverse-progress" onclick="seek(event)">
+          <div class="uiverse-progress-fill" id="progress"></div>
         </div>
 
-        <div class="progress-wrap">
-          <span class="progress-time" id="time_cur">0:00</span>
-          <div class="progress-bar" onclick="seek(event)">
-            <div class="progress-fill" id="progress"></div>
-          </div>
-          <span class="progress-time" id="time_tot">0:00</span>
+        <!-- Time Display (Outside music-bar) -->
+        <div class="time-display">
+          <span id="time_cur">0:00</span> / <span id="time_tot">0:00</span>
         </div>
 
-        <div class="volume-wrap">
-          <button class="ctrl-btn" onclick="mute()" id="vol_btn">🔊</button>
-          <input type="range" class="volume-slider" min="0" max="100" value="80" onchange="setVol(this.value)">
-        </div>
+
+
+
       </div>
     </div>
   </div>
@@ -851,6 +1322,9 @@
       document.getElementById('lobby').style.display = 'none';
       document.getElementById('app').classList.add('active');
       document.getElementById('room_name_display').textContent = '• ' + data.room_name;
+
+      // Start Reactive Background
+      // setTimeout(() => initEffects('waves-canvas'), 100); // Disabled starry background
     });
 
     function leaveRoom() {
@@ -862,6 +1336,12 @@
       document.getElementById('app').classList.remove('active');
       document.getElementById('lobby').style.display = 'flex';
       document.getElementById('room_name_display').textContent = '';
+
+      document.getElementById('room_name_display').textContent = '';
+
+      // Stop Effects
+      stopEffects();
+
       // Reset player
       if (yt && ready) {
         yt.stopVideo();
@@ -915,16 +1395,40 @@
     function onYouTubeIframeAPIReady() {
       yt = new YT.Player('player', {
         height: '0', width: '0', videoId: '',
-        playerVars: { autoplay: 1 },
+        playerVars: {
+          autoplay: 1,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1
+        },
         events: {
-          onReady: () => { ready = true; yt.setVolume(vol); },
+          onReady: () => {
+            ready = true;
+            yt.setVolume(vol);
+            // Enable background playback
+            enableBackgroundPlayback();
+          },
           onError: () => { document.getElementById('player_status').textContent = 'Error'; setTimeout(() => socket.emit('song_ended'), 1000); },
           onStateChange: e => {
             const s = { '-1': 'Loading', 0: 'Ended', 1: 'Playing', 2: 'Paused', 3: 'Buffering', 5: 'Ready' };
             document.getElementById('player_status').textContent = s[e.data] || '';
             playing = e.data === 1;
-            document.getElementById('play_btn').textContent = playing ? '⏸' : '▶';
+
+            // Toggle SVG Icon
+            const path = document.querySelector('#play_icon_svg path');
+            if (path) {
+              // Play: M8 5v14l11-7z | Pause: M6 19h4V5H6v14zm8-14v14h4V5h-4z
+              path.setAttribute('d', playing ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z' : 'M8 5v14l11-7z');
+            }
+
             if (e.data === 0) socket.emit('song_ended');
+
+            // Update background state
+            setMusicState(playing);
+
+            // Update Media Session playback state
+            updateMediaSession(playing);
           }
         }
       });
@@ -934,6 +1438,17 @@
           document.getElementById('progress').style.width = (c / t * 100) + '%';
           document.getElementById('time_cur').textContent = fmt(c);
           document.getElementById('time_tot').textContent = fmt(t);
+
+          // Update Media Session position
+          if ('mediaSession' in navigator && navigator.mediaSession.setPositionState) {
+            try {
+              navigator.mediaSession.setPositionState({
+                duration: t,
+                playbackRate: 1,
+                position: c
+              });
+            } catch (e) { /* Ignore errors */ }
+          }
         }
       }, 500);
 
@@ -946,6 +1461,66 @@
           });
         }
       }, 2000);
+    }
+
+    // Background Playback Support
+    function enableBackgroundPlayback() {
+      // Prevent pausing when tab is hidden
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden && yt && ready && playing) {
+          // Keep playing in background
+          console.log('Tab hidden - music continues playing');
+        }
+      });
+
+      // Prevent sleep/idle
+      if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').catch(() => { });
+      }
+    }
+
+    // Media Session API for background controls
+    function updateMediaSession(isPlaying) {
+      if (!('mediaSession' in navigator)) return;
+
+      const titleEl = document.getElementById('player_title');
+      const title = titleEl ? titleEl.textContent : 'YoYo Music';
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: title,
+        artist: 'YoYo Music',
+        artwork: [
+          { src: '/static/icon-96.png', sizes: '96x96', type: 'image/png' },
+          { src: '/static/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/static/icon-512.png', sizes: '512x512', type: 'image/png' }
+        ]
+      });
+
+      navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+
+      navigator.mediaSession.setActionHandler('play', () => {
+        if (yt && ready) {
+          yt.playVideo();
+          socket.emit('play_pause');
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('pause', () => {
+        if (yt && ready) {
+          yt.pauseVideo();
+          socket.emit('play_pause');
+        }
+      });
+
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        vote(); // Skip to next
+      });
+
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (yt && ready && details.seekTime) {
+          yt.seekTo(details.seekTime, true);
+        }
+      });
     }
 
     socket.on('search_results', r => {
@@ -964,17 +1539,33 @@
     });
 
     socket.on('now_playing', s => {
-      const t = document.getElementById('player_title');
-      const i = document.getElementById('thumb');
+      const infoArea = document.getElementById('player_title_container');
       const c = document.getElementById('now_playing_card');
+
       if (s && s.id) {
-        t.textContent = s.title;
-        i.src = `https://img.youtube.com/vi/${s.id}/mqdefault.jpg`;
-        i.style.display = 'block';
+        // Reset to default structure
+        infoArea.innerHTML = `<div class="uiverse-title"><span id="player_title">${esc(s.title)}</span></div>`;
+
         c.innerHTML = `<div style="text-align:center"><img src="https://img.youtube.com/vi/${s.id}/mqdefault.jpg" style="width:100%;border-radius:6px;margin-bottom:8px"><div style="font-size:13px">${esc(s.title)}</div></div>`;
 
+        // Check for overflow
+        setTimeout(() => {
+          const titleDiv = infoArea.querySelector('.uiverse-title');
+          // If content is wider than container
+          if (titleDiv && titleDiv.scrollWidth > infoArea.clientWidth) {
+            // Apply Marquee Structure
+            const text = esc(s.title);
+            infoArea.innerHTML = `<div class="marquee-wrapper-uiverse">
+               <div class="marquee-content animate-marquee">
+                  <span class="uiverse-title">${text}</span> &nbsp;&nbsp;&nbsp;&nbsp; <span class="uiverse-title">${text}</span> &nbsp;&nbsp;&nbsp;&nbsp; 
+                  <span class="uiverse-title">${text}</span>
+               </div>
+            </div>`;
+          }
+        }, 50);
+
         if (ready) {
-          // Sync playback position for users joining mid-song
+          // Sync playback position
           const startAt = s.start_at || 0;
           yt.loadVideoById({ videoId: s.id, startSeconds: startAt });
 
@@ -982,16 +1573,28 @@
           if (s.is_playing === false) {
             setTimeout(() => yt.pauseVideo(), 500);
           }
+          setMusicState(s.is_playing);
         }
       } else {
-        t.textContent = 'Not playing';
-        i.style.display = 'none';
+        infoArea.innerHTML = `<div class="uiverse-title"><span id="player_title">Not playing</span></div>`;
+
         c.innerHTML = '<div class="empty">Nothing playing</div>';
         if (yt && ready) yt.stopVideo();
+        setMusicState(false);
       }
     });
 
-    socket.on('toggle_play', () => { if (yt && ready) yt.getPlayerState() === 1 ? yt.pauseVideo() : yt.playVideo(); });
+    socket.on('toggle_play', () => {
+      if (yt && ready) {
+        if (yt.getPlayerState() === 1) {
+          yt.pauseVideo();
+          setMusicState(false);
+        } else {
+          yt.playVideo();
+          setMusicState(true);
+        }
+      }
+    });
 
     socket.on('queue_updated', q => {
       const el = document.getElementById('queue_list');
@@ -1043,6 +1646,7 @@
     // KEYBOARD SHORTCUTS DISABLED FOR TESTING
     // Will add back after confirming typing works
   </script>
+  <script src="/static/effects.js"></script>
 </body>
 
 </html>
