@@ -1,4 +1,5 @@
 Flask
 flask-socketio
+flask-sqlalchemy
 yt-dlp
 eventlet
