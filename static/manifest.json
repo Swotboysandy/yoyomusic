@@ -1,0 +1,17 @@
+{
+    "name": "YoYo Music",
+    "short_name": "YoYo",
+    "description": "Listen to music together in real-time.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#000000",
+    "theme_color": "#9500ff",
+    "icons": [
+        {
+            "src": "/static/logo.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

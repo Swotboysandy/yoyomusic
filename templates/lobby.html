@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YoYo Music - Lobby</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#9500ff">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <style>
+        /* CSS extracted from index.html (reset, login-card, aurora-bg, neon-btns, etc.) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .aurora-bg {
+            background-color: #0d0d0d;
+            background-image:
+                radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+                radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+            background-size: 100% 100%;
+            position: relative;
+        }
+
+        .login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .glass-card {
+            background: rgba(10, 10, 10, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .glitch-text {
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .glass-input {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #fff;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .neon-btn {
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .neon-btn.primary {
+            background: rgba(149, 0, 255, 0.2);
+            border-color: rgba(149, 0, 255, 0.4);
+        }
+
+        .neon-btn:hover {
+            border-color: #fff;
+            transform: translateY(-1px);
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: #222;
+            border-radius: 8px;
+            opacity: 0;
+            transition: 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+    </style>
+</head>
+
+<body class="aurora-bg">
+    <div class="login-container">
+        <div class="glass-card">
+            <h1 class="glitch-text" data-text="YoYo Music">YoYo Music</h1>
+            <p style="color: rgba(255,255,255,0.5); margin-bottom: 24px;">Listen together in rooms</p>
+
+            <input type="text" id="username" placeholder="Your name" maxlength="20" class="glass-input">
+
+            <div style="margin-bottom: 24px;">
+                <div
+                    style="font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase;">
+                    Available Rooms</div>
+                <div id="room_list" style="max-height: 200px; overflow-y: auto; text-align: left;">
+                    <div style="text-align: center; color: #555; padding: 20px;">Loading rooms...</div>
+                </div>
+            </div>
+
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px;">
+                <div
+                    style="font-size: 12px; color: rgba(255,255,255,0.4); margin-bottom: 12px; letter-spacing: 1px; text-transform: uppercase;">
+                    Create Room</div>
+                <input type="text" id="new_room_name" placeholder="Room name" maxlength="30" class="glass-input">
+                <input type="password" id="new_room_password" placeholder="Password (optional)" class="glass-input">
+                <button class="neon-btn primary"
+                    style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px;"
+                    onclick="createRoom()">
+                    <ion-icon name="add-circle-outline"></ion-icon> Create Room
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="password_modal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 2000; align-items: center; justify-content: center;">
+        <div class="glass-card" style="max-width: 320px;">
+            <h2 style="margin-bottom: 16px;">Enter Password</h2>
+            <p id="modal_room_name" style="margin-bottom: 16px; font-size: 14px; color: #888;"></p>
+            <input type="password" id="join_password" class="glass-input" placeholder="Room password">
+            <div style="display: flex; gap: 10px;">
+                <button class="neon-btn" style="flex: 1;" onclick="closeModal()">Cancel</button>
+                <button class="neon-btn primary" style="flex: 1;" onclick="submitPassword()">Join</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const socket = io();
+        let pendingRoomId = null;
+
+        socket.on('connect', () => socket.emit('get_rooms'));
+
+        socket.on('room_list', rooms => {
+            const el = document.getElementById('room_list');
+            if (!rooms.length) {
+                el.innerHTML = '<div style="text-align: center; padding: 20px; color: #555;">No rooms found.</div>';
+                return;
+            }
+            el.innerHTML = rooms.map(r => `
+        <div onclick="tryJoin('${r.id}', '${r.name}', ${r.has_password})" 
+             style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 8px; cursor: pointer;">
+          <div>
+            <div style="font-size: 14px; font-weight: 500;">${esc(r.name)}</div>
+            <div style="font-size: 11px; color: #555;">${r.user_count} listeners • ${r.has_password ? '🔒 Private' : '🔓 Public'}</div>
+            <div style="font-size: 11px; color: #888; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">
+                <span style="color:#def92e">▶</span> ${esc(r.now_playing)}
+            </div>
+          </div>
+          <div>${r.has_password ? '' : '→'}</div>
+        </div>
+      `).join('');
+        });
+
+        function createRoom() {
+            const username = document.getElementById('username').value.trim();
+            const name = document.getElementById('new_room_name').value.trim();
+            if (!username) return showToast("Enter your name");
+            if (!name) return showToast("Enter room name");
+
+            localStorage.setItem('yoyo_username', username);
+            socket.emit('create_room', { name, password: document.getElementById('new_room_password').value });
+        }
+
+        socket.on('room_created', data => {
+            const pass = document.getElementById('new_room_password').value;
+            if (pass) {
+                window.location.href = `/room/${data.id}?pass=${btoa(pass)}`;
+            } else {
+                window.location.href = `/room/${data.id}`;
+            }
+        });
+
+        function tryJoin(id, name, hasPass) {
+            const username = document.getElementById('username').value.trim();
+            if (!username) return showToast("Enter your name");
+            localStorage.setItem('yoyo_username', username);
+
+            if (hasPass) {
+                pendingRoomId = id;
+                document.getElementById('modal_room_name').textContent = name;
+                document.getElementById('password_modal').style.display = 'flex';
+            } else {
+                window.location.href = `/room/${id}`;
+            }
+        }
+
+        function closeModal() { document.getElementById('password_modal').style.display = 'none'; }
+        function submitPassword() {
+            const pass = document.getElementById('join_password').value;
+            localStorage.setItem('yoyo_password', pass);
+            window.location.href = `/room/${pendingRoomId}?pass=${btoa(pass)}`;
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // Load saved username
+        const saved = localStorage.getItem('yoyo_username');
+        if (saved) document.getElementById('username').value = saved;
+
+        // PWA SW
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js');
+        }
+    </script>
+</body>
+
+</html>

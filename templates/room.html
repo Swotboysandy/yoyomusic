@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YoYo Music - Room</title>
+    <link rel="icon" type="image/png" href="/static/favicon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#9500ff">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <style>
+        /* CSS extracted from index.html (Glass theme, Aurora Bg, Player, Chat, etc.) */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: #000;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .aurora-bg {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-color: #0d0d0d;
+            background-image:
+                radial-gradient(at 0% 0%, var(--aurora-1, hsla(253, 16%, 7%, 1)) 0, transparent 50%),
+                radial-gradient(at 50% 0%, var(--aurora-2, hsla(225, 39%, 30%, 1)) 0, transparent 50%),
+                radial-gradient(at 100% 0%, var(--aurora-3, hsla(339, 49%, 30%, 1)) 0, transparent 50%);
+            transition: 1s;
+        }
+
+        #bg-image {
+            position: fixed;
+            inset: 0;
+            z-index: -2;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: blur(80px) brightness(0.4);
+            transition: 2s;
+            opacity: 0;
+        }
+
+        #bg-image.visible {
+            opacity: 1;
+        }
+
+        body.theme-ocean {
+            --aurora-1: hsla(180, 50%, 10%, 1);
+            --aurora-2: hsla(200, 60%, 25%, 1);
+            --aurora-3: hsla(160, 40%, 30%, 1);
+        }
+
+        body.theme-cyber {
+            --aurora-1: hsla(300, 40%, 10%, 1);
+            --aurora-2: hsla(320, 60%, 25%, 1);
+            --aurora-3: hsla(150, 40%, 30%, 1);
+        }
+
+        body.theme-sunset {
+            --aurora-1: hsla(20, 50%, 10%, 1);
+            --aurora-2: hsla(10, 60%, 25%, 1);
+            --aurora-3: hsla(40, 40%, 30%, 1);
+        }
+
+        body.theme-midnight {
+            --aurora-1: hsla(240, 30%, 5%, 1);
+            --aurora-2: hsla(270, 40%, 15%, 1);
+            --aurora-3: hsla(290, 30%, 20%, 1);
+        }
+
+        #waves-canvas {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .glass-premium {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            margin: 20px;
+        }
+
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px 120px 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section {
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Search/Input */
+        .glass-input {
+            display: block;
+            width: 100%;
+            padding: 14px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: #fff;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .neon-btn {
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-family: inherit;
+        }
+
+        .neon-btn.primary {
+            background: rgba(149, 0, 255, 0.2);
+            border-color: rgba(149, 0, 255, 0.4);
+        }
+
+        .neon-btn.active {
+            background: rgba(222, 249, 46, 0.2);
+            border-color: rgba(222, 249, 46, 0.4);
+            color: #def92e;
+        }
+
+        .neon-btn:hover {
+            border-color: #fff;
+        }
+
+        /* Songs */
+        .song-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .song-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 10px;
+            transition: 0.2s;
+        }
+
+        .song-item.sortable-ghost {
+            opacity: 0.4;
+            background: rgba(149, 0, 255, 0.2);
+        }
+
+        .song-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .song-thumb {
+            width: 44px;
+            height: 33px;
+            border-radius: 4px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .song-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .song-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .song-title {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .song-meta {
+            font-size: 11px;
+            color: #555;
+        }
+
+        /* Chat */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chat-msg {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px 12px;
+            border-radius: 12px;
+            max-width: 85%;
+            align-self: flex-start;
+        }
+
+        .chat-msg.self {
+            align-self: flex-end;
+            background: rgba(149, 0, 255, 0.1);
+        }
+
+        .chat-user {
+            font-size: 11px;
+            font-weight: 700;
+            color: #888;
+            margin-bottom: 2px;
+        }
+
+        .chat-text {
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        /* Player Overlay */
+        .player-overlay {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 500px;
+            padding: 0 20px;
+            z-index: 1000;
+        }
+
+        .player-card {
+            padding: 12px 20px;
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+
+        .player-info {
+            flex: 1;
+            min-width: 0;
+            background: rgba(149, 0, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 40px;
+        }
+
+        .player-title {
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-controls {
+            display: flex;
+            gap: 12px;
+        }
+
+        .prog-bar {
+            position: absolute;
+            top: -10px;
+            left: 40px;
+            right: 40px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        .prog-fill {
+            height: 100%;
+            width: 0;
+            background: #def92e;
+            border-radius: 2px;
+            position: relative;
+        }
+
+        .prog-fill::after {
+            content: '';
+            position: absolute;
+            right: -4px;
+            top: -3px;
+            width: 10px;
+            height: 10px;
+            background: #fff;
+            border-radius: 50%;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            background: #222;
+            border-radius: 8px;
+            opacity: 0;
+            transition: 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+
+        /* Host Crown */
+        .host-crown {
+            color: #def92e;
+            margin-right: 5px;
+            font-size: 14px;
+        }
+
+        /* Avatars */
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 12px;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+            background: #444;
+        }
+
+        .avatar.sm {
+            width: 24px;
+            height: 24px;
+            font-size: 10px;
+        }
+
+        /* Reactions */
+        .reaction-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            justify-content: center;
+        }
+
+        .reaction-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 18px;
+        }
+
+        .reaction-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            transform: scale(1.1);
+        }
+
+        /* Themes */
+        .theme-bar {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .theme-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: 0.2s;
+        }
+
+        .theme-dot:hover {
+            transform: scale(1.3);
+        }
+
+        .theme-dot.active {
+            border-color: #fff;
+            box-shadow: 0 0 8px #fff;
+        }
+
+        .floating-reaction {
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            pointer-events: none;
+            font-size: 24px;
+            z-index: 10000;
+            animation: floatUp 3s forwards ease-out;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translate(-50%, 0) scale(0.5);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+                transform: translate(-50%, -20px) scale(1.2);
+            }
+
+            100% {
+                transform: translate(calc(-50% + (var(--x-offset) * 1px)), -400px) scale(0.8);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="aurora-bg"></div>
+    <img id="bg-image" alt="">
+    <canvas id="waves-canvas"></canvas>
+
+    <header class="header glass-premium">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <h1 style="font-size: 18px; letter-spacing: 1px;">YOYO</h1>
+            <div id="room_name_display" style="font-size: 14px; color: #888;"></div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <div style="font-size: 12px; color: #555;"><span id="user_count">0</span> listeners</div>
+            <div id="host_theme_controls"
+                style="display:none; align-items:center; gap:8px; border-left:1px solid rgba(255,255,255,0.1); padding-left:15px; margin-left:5px;">
+                <div class="theme-dot" style="background:hsla(253, 16%, 30%, 1)"
+                    onclick="socket.emit('set_theme', {theme:'default'})" title="Default"></div>
+                <div class="theme-dot" style="background:hsla(180, 50%, 30%, 1)"
+                    onclick="socket.emit('set_theme', {theme:'ocean'})" title="Ocean"></div>
+                <div class="theme-dot" style="background:hsla(300, 40%, 30%, 1)"
+                    onclick="socket.emit('set_theme', {theme:'cyber'})" title="Cyber"></div>
+                <div class="theme-dot" style="background:hsla(20, 50%, 30%, 1)"
+                    onclick="socket.emit('set_theme', {theme:'sunset'})" title="Sunset"></div>
+                <div class="theme-dot" style="background:hsla(240, 30%, 20%, 1)"
+                    onclick="socket.emit('set_theme', {theme:'midnight'})" title="Midnight"></div>
+            </div>
+            <button class="neon-btn" onclick="location.href='/'" title="Back to Lobby"><ion-icon
+                    name="home-outline"></ion-icon></button>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="grid">
+            <div class="left-col">
+                <!-- Search -->
+                <div class="section glass-premium">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="search_input" class="glass-input" placeholder="Search YouTube..."
+                            onkeydown="if(event.key==='Enter')search()">
+                        <button class="neon-btn primary" onclick="search()" title="Search"><ion-icon
+                                name="search-outline"></ion-icon></button>
+                    </div>
+                    <div id="search_results" class="song-list"
+                        style="margin-top: 15px; display: none; max-height: 300px; overflow-y: auto;"></div>
+                </div>
+
+                <!-- Queue -->
+                <div class="section glass-premium">
+                    <div class="section-header">
+                        <span class="section-title">Queue</span>
+                        <span id="queue_count" style="font-size: 11px; color: #555;">0 songs</span>
+                    </div>
+                    <div id="queue_list" class="song-list">
+                        <div style="text-align: center; color: #444; padding: 20px;">No songs in queue</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="right-col">
+                <!-- Chat -->
+                <div class="section glass-premium" style="padding: 0;">
+                    <div class="chat-container">
+                        <div class="section-header" style="padding: 15px 20px; margin-bottom: 0;">
+                            <span class="section-title">Live Chat</span>
+                        </div>
+                        <div id="chat_messages" class="chat-messages"></div>
+                        <div
+                            style="padding: 15px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; gap: 8px;">
+                            <input type="text" id="chat_input" class="glass-input"
+                                style="padding: 10px 15px; font-size: 13px;" placeholder="Message..."
+                                onkeydown="if(event.key==='Enter')sendMessage()">
+                            <button class="neon-btn primary" onclick="sendMessage()" style="padding: 0 15px;"
+                                title="Send"><ion-icon name="send"></ion-icon></button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Listeners -->
+                <div class="section glass-premium">
+                    <div class="section-header"><span class="section-title">Listeners</span></div>
+                    <div id="user_list" class="song-list"></div>
+
+                    <div class="section-header"
+                        style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                        <span class="section-title">Reactions</span>
+                    </div>
+                    <div class="reaction-bar">
+                        <button class="reaction-btn" onclick="sendReaction('🔥')">🔥</button>
+                        <button class="reaction-btn" onclick="sendReaction('❤️')">❤️</button>
+                        <button class="reaction-btn" onclick="sendReaction('👏')">👏</button>
+                        <button class="reaction-btn" onclick="sendReaction('😂')">😂</button>
+                        <button class="reaction-btn" onclick="sendReaction('🤩')">🤩</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="player-overlay">
+        <div class="prog-bar" onclick="seek(event)">
+            <div id="progress" class="prog-fill"></div>
+        </div>
+        <div class="player-card glass-premium">
+            <div class="player-info">
+                <div id="player_title" class="player-title">Not playing</div>
+            </div>
+            <div class="player-controls">
+                <button class="neon-btn" onclick="socket.emit('toggle_shuffle')" title="Shuffle"
+                    id="shuffle_btn"><ion-icon name="shuffle-outline"></ion-icon></button>
+                <button class="neon-btn" onclick="socket.emit('toggle_repeat')" title="Repeat" id="repeat_btn"><ion-icon
+                        name="repeat-outline"></ion-icon></button>
+                <button class="neon-btn" onclick="toggle()" id="play_btn"><ion-icon name="play"></ion-icon></button>
+                <button class="neon-btn" onclick="vote()" title="Vote Skip"><ion-icon
+                        name="play-skip-forward-outline"></ion-icon></button>
+            </div>
+        </div>
+        <div style="text-align: center; font-size: 10px; color: #444; margin-top: 8px; font-family: monospace;">
+            <span id="time_cur">0:00</span> / <span id="time_tot">0:00</span>
+        </div>
+    </div>
+
+    <div id="player"></div>
+    <div class="toast" id="toast"></div>
+
+    <script src="/static/effects.js"></script>
+    <script>
+        const socket = io();
+        let yt, ready = false, playing = false;
+        const roomId = window.location.pathname.split('/').pop();
+        const username = localStorage.getItem('yoyo_username') || 'Guest';
+        let isHost = false;
+
+        socket.on('connect', () => {
+            const params = new URLSearchParams(window.location.search);
+            const pass = params.has('pass') ? atob(params.get('pass')) : '';
+            socket.emit('join_room', { room_id: roomId, username, password: pass });
+        });
+
+        socket.on('joined_room', data => {
+            document.getElementById('room_name_display').textContent = '• ' + data.room_name;
+            isHost = data.is_host;
+            updateRoomUI(data);
+            initEffects('waves-canvas');
+        });
+
+        socket.on('room_update', data => updateRoomUI(data));
+
+        function updateRoomUI(data) {
+            if (data.is_host !== undefined) {
+                isHost = data.is_host;
+                document.getElementById('host_theme_controls').style.display = isHost ? 'flex' : 'none';
+            }
+            if (data.shuffle_enabled !== undefined) {
+                document.getElementById('shuffle_btn').classList.toggle('active', data.shuffle_enabled);
+            }
+            if (data.repeat_mode !== undefined) {
+                const btn = document.getElementById('repeat_btn');
+                btn.classList.toggle('active', data.repeat_mode !== 'off');
+                btn.querySelector('ion-icon').setAttribute('name', data.repeat_mode === 'one' ? 'repeat' : 'repeat-outline');
+                btn.title = 'Repeat: ' + data.repeat_mode.toUpperCase();
+            }
+            if (data.theme !== undefined) {
+                const themes = ['default', 'ocean', 'cyber', 'sunset', 'midnight'];
+                themes.forEach(t => document.body.classList.remove('theme-' + t));
+                if (data.theme !== 'default') document.body.classList.add('theme-' + data.theme);
+
+                // Active dot
+                document.querySelectorAll('.theme-dot').forEach(dot => {
+                    dot.classList.toggle('active', dot.title.toLowerCase() === data.theme);
+                });
+            }
+        }
+
+        socket.on('room_error', msg => { alert(msg); location.href = '/'; });
+
+        // Sync Logic
+        socket.on('now_playing', s => {
+            if (s) {
+                document.getElementById('player_title').textContent = s.title;
+                const bg = document.getElementById('bg-image');
+                bg.src = `https://img.youtube.com/vi/${s.id}/maxresdefault.jpg`;
+                bg.onload = () => bg.classList.add('visible');
+                bg.onerror = () => {
+                    bg.src = `https://img.youtube.com/vi/${s.id}/0.jpg`; // Fallback
+                };
+
+                // Update play/pause button icon
+                document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', s.is_playing ? 'pause' : 'play');
+
+                if (ready) {
+                    if (yt.getVideoData().video_id !== s.id) {
+                        yt.loadVideoById({ videoId: s.id, startSeconds: s.start_at || 0 });
+                    } else if (Math.abs(yt.getCurrentTime() - s.start_at) > 3) {
+                        yt.seekTo(s.start_at, true);
+                    }
+                    if (!s.is_playing) setTimeout(() => yt.pauseVideo(), 500);
+                }
+            } else {
+                document.getElementById('player_title').textContent = 'Not playing';
+                document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', 'play');
+                if (ready) yt.stopVideo();
+            }
+        });
+
+        socket.on('toggle_play', d => {
+            if (!ready) return;
+            d.is_playing ? yt.playVideo() : yt.pauseVideo();
+            document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', d.is_playing ? 'pause' : 'play');
+        });
+
+        socket.on('sync_seek', d => {
+            if (!ready) return;
+            yt.seekTo(d.time, true);
+        });
+
+        socket.on('queue_updated', q => {
+            const el = document.getElementById('queue_list');
+            document.getElementById('queue_count').textContent = q.length + ' songs';
+            if (!q.length) { el.innerHTML = '<div style="text-align:center;color:#444;padding:20px">Empty</div>'; return; }
+            el.innerHTML = q.map(s => `
+        <div class="song-item" data-uuid="${s.uuid}" style="${isHost ? 'cursor:grab' : ''}">
+          <div class="song-info">
+            <div class="song-title">${esc(s.title)}</div>
+            <div class="song-meta">added by ${esc(s.added_by)}</div>
+          </div>
+          <button onclick="remove('${s.uuid}')" style="background:none;border:none;color:#555;cursor:pointer" title="Remove"><ion-icon name="trash-outline"></ion-icon></button>
+        </div>
+      `).join('');
+
+            if (isHost) {
+                new Sortable(el, {
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function () {
+                        const uuids = Array.from(el.querySelectorAll('.song-item')).map(item => item.dataset.uuid);
+                        socket.emit('reorder_queue', { uuids: uuids });
+                    }
+                });
+            }
+        });
+
+        socket.on('user_list', users => {
+            document.getElementById('user_count').textContent = users.length;
+            document.getElementById('user_list').innerHTML = users.map(u => `
+                <div style="font-size:13px;padding:5px 0;display:flex;align-items:center;gap:10px;">
+                    <div class="avatar sm" style="background:${getAvatarColor(u.username)}">${u.username.charAt(0).toUpperCase()}</div>
+                    <div style="display:flex;align-items:center;">
+                        ${u.is_host ? '<span class="host-crown" title="Host">👑</span>' : ''}
+                        <span>${esc(u.username)}</span>
+                    </div>
+                </div>
+            `).join('');
+        });
+
+        socket.on('new_message', d => appendMsg(d));
+        socket.on('chat_history', h => {
+            document.getElementById('chat_messages').innerHTML = '';
+            h.forEach(appendMsg);
+        });
+
+        socket.on('status', m => showToast(m));
+
+        // YT API
+        function onYouTubeIframeAPIReady() {
+            yt = new YT.Player('player', {
+                height: '0', width: '0',
+                events: {
+                    onReady: () => { ready = true; },
+                    onStateChange: e => {
+                        playing = (e.data === 1);
+                        setMusicState(playing);
+                        if (e.data === 0) socket.emit('song_ended');
+                    }
+                }
+            });
+            setInterval(() => {
+                if (ready && playing) {
+                    const c = yt.getCurrentTime(), t = yt.getDuration();
+                    document.getElementById('progress').style.width = (c / t * 100) + '%';
+                    document.getElementById('time_cur').textContent = fmt(c);
+                    document.getElementById('time_tot').textContent = fmt(t);
+                }
+            }, 500);
+            setInterval(() => {
+                if (ready && playing) socket.emit('sync_time', { time: yt.getCurrentTime(), is_playing: true });
+            }, 4000);
+        }
+
+        // Helpers
+        function search() {
+            const q = document.getElementById('search_input').value;
+            if (!q) return;
+            document.getElementById('search_results').style.display = 'block';
+            document.getElementById('search_results').innerHTML = '<div style="padding:20px;color:#555">Searching...</div>';
+            socket.emit('search', q);
+        }
+        socket.on('search_results', r => {
+            document.getElementById('search_results').innerHTML = r.map(s => `
+        <div class="song-item">
+          <div class="song-thumb"><img src="https://img.youtube.com/vi/${s.id}/mqdefault.jpg"></div>
+          <div class="song-info">
+            <div class="song-title">${esc(s.title)}</div>
+          </div>
+          <button class="neon-btn primary" onclick='add(${JSON.stringify(s)})' style="padding:5px 10px" title="Add to Queue"><ion-icon name="add-circle-outline"></ion-icon></button>
+        </div>
+      `).join('');
+        });
+
+        function add(s) { socket.emit('add_to_queue', s); }
+        function remove(u) { socket.emit('remove_from_queue', { uuid: u }); }
+        function toggle() { socket.emit('play_pause'); }
+        function vote() { socket.emit('vote_skip'); }
+        function seek(e) {
+            if (!ready) return;
+            const r = e.currentTarget.getBoundingClientRect();
+            const newTime = yt.getDuration() * ((e.clientX - r.left) / r.width);
+            yt.seekTo(newTime);
+            socket.emit('seek_to', { time: newTime });
+        }
+
+        function sendMessage() {
+            const i = document.getElementById('chat_input');
+            if (!i.value.trim()) return;
+            socket.emit('send_message', { message: i.value });
+            i.value = '';
+        }
+        function appendMsg(d) {
+            const c = document.getElementById('chat_messages');
+            const div = document.createElement('div');
+            div.className = 'chat-msg' + (d.username === username ? ' self' : '');
+
+            const avatarHtml = `<div class="avatar sm" style="background:${getAvatarColor(d.username)}; margin-bottom: 5px;">${d.username.charAt(0).toUpperCase()}</div>`;
+
+            div.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                    <div class="avatar sm" style="background:${getAvatarColor(d.username)}; width:18px; height:18px; font-size:9px;">${d.username.charAt(0).toUpperCase()}</div>
+                    <div class="chat-user">${esc(d.username)} • ${d.time}</div>
+                </div>
+                <div class="chat-text">${esc(d.message)}</div>
+            `;
+            c.appendChild(div);
+            c.scrollTop = c.scrollHeight;
+        }
+
+        // Reactions
+        function sendReaction(emoji) {
+            socket.emit('send_reaction', { emoji });
+        }
+
+        socket.on('new_reaction', data => {
+            const div = document.createElement('div');
+            div.className = 'floating-reaction';
+            div.textContent = data.emoji;
+            // Random horizontal drift
+            const xOffset = Math.random() * 200 - 100;
+            div.style.setProperty('--x-offset', xOffset);
+            // Random starting point near speaker/bottom
+            div.style.left = (50 + (Math.random() * 10 - 5)) + '%';
+
+            document.body.appendChild(div);
+            setTimeout(() => div.remove(), 3000);
+        });
+
+        function showToast(m) {
+            const t = document.getElementById('toast');
+            t.textContent = m; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        function getAvatarColor(name) {
+            let hash = 0;
+            for (let i = 0; i < name.length; i++) {
+                hash = name.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const h = Math.abs(hash) % 360;
+            return `hsl(${h}, 60%, 45%)`;
+        }
+
+        function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+        function fmt(s) { const m = Math.floor(s / 60); return m + ':' + Math.floor(s % 60).toString().padStart(2, '0'); }
+
+        // PWA SW
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/static/sw.js');
+        }
+    </script>
+</body>
+
+</html>
