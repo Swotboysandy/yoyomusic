@@ -982,96 +982,130 @@
         socket.on('room_error', msg => { alert(msg); location.href = '/'; });
 
         // Sync Logic
-        socket.on('now_playing', s => {
-            if (s) {
-                document.getElementById('player_title').textContent = s.title;
-                const bg = document.getElementById('bg-image');
-                bg.src = `https://img.youtube.com/vi/${s.id}/maxresdefault.jpg`;
-                bg.onload = () => bg.classList.add('visible');
-                bg.onerror = () => {
-                    bg.src = `https://img.youtube.com/vi/${s.id}/0.jpg`; // Fallback
-                };
+        // --- Robust Sync Manager ---
+        let serverState = null; // { time: number, isPlaying: boolean, receivedAt: number }
+        let lastSeekTime = 0;
 
-                // Update play/pause button icon
-                document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', s.is_playing ? 'pause' : 'play');
+        function updateServerState(time, isPlaying) {
+            serverState = {
+                time: time,
+                isPlaying: isPlaying,
+                receivedAt: Date.now()
+            };
+        }
 
-                currentSongState = s;
-                if (ready) {
-                    applySongState(s);
+        // Main Sync Loop (Runs every 1s)
+        setInterval(() => {
+            if (!ready || isHost || !serverState) return;
+
+            // 1. Calculate where we SHOULD be
+            const timeSinceUpdate = (Date.now() - serverState.receivedAt) / 1000;
+            let targetTime = serverState.time;
+            if (serverState.isPlaying) {
+                targetTime += timeSinceUpdate;
+            }
+
+            // 2. Get where we ARE
+            const currentTime = yt.getCurrentTime();
+            const playerState = yt.getPlayerState();
+            const diff = targetTime - currentTime;
+
+            // Don't sync if buffering or we just sought recently
+            if (playerState === YT.PlayerState.BUFFERING || (Date.now() - lastSeekTime < 2000)) {
+                return;
+            }
+
+            // 3. State Management (Play/Pause)
+            if (serverState.isPlaying) {
+                // If we should be playing but aren't
+                if (playerState !== YT.PlayerState.PLAYING && playerState !== YT.PlayerState.BUFFERING) {
+                    console.log('Sync: Force Play');
+                    yt.playVideo();
                 }
             } else {
+                // If we should be paused but are playing
+                if (playerState === YT.PlayerState.PLAYING) {
+                    console.log('Sync: Force Pause');
+                    yt.pauseVideo();
+                }
+            }
+
+            // 4. Time Correction (Drift)
+            // If absolute drift > 1.5 seconds, correction needed
+            if (Math.abs(diff) > 1.5) {
+                console.log(`Sync Loop: Drift ${diff.toFixed(2)}s. Seeking to ${targetTime.toFixed(2)}`);
+                yt.seekTo(targetTime, true);
+                lastSeekTime = Date.now();
+                showToast('Syncing...');
+            }
+
+        }, 1000);
+
+        socket.on('sync_update', d => {
+            if (isHost) return;
+            updateServerState(d.time, d.is_playing);
+        });
+
+        socket.on('now_playing', s => {
+            if (!s) {
                 currentSongState = null;
+                serverState = null;
                 document.getElementById('player_title').textContent = 'Not playing';
                 document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', 'play');
                 if (ready) yt.stopVideo();
+                return;
+            }
+
+            // UI Updates
+            document.getElementById('player_title').textContent = s.title;
+            const bg = document.getElementById('bg-image');
+            bg.src = `https://img.youtube.com/vi/${s.id}/maxresdefault.jpg`;
+            bg.onload = () => bg.classList.add('visible');
+            bg.onerror = () => { bg.src = `https://img.youtube.com/vi/${s.id}/0.jpg`; };
+            document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', s.is_playing ? 'pause' : 'play');
+
+            currentSongState = s;
+            updateServerState(s.start_at, s.is_playing);
+
+            if (ready) {
+                const currentId = yt.getVideoData() ? yt.getVideoData().video_id : null;
+                if (currentId !== s.id) {
+                    console.log('New song detected, loading:', s.title);
+                    yt.loadVideoById({ videoId: s.id, startSeconds: s.start_at });
+                    lastSeekTime = Date.now(); // Give it time to load
+                } else {
+                    // Update state immediately if same song
+                    if (s.is_playing && yt.getPlayerState() !== YT.PlayerState.PLAYING) yt.playVideo();
+                }
             }
         });
 
+        // Simplified applySongState (legacy support removed, handled by sync loop)
         function applySongState(s) {
-            if (!s || !ready) return;
-
-            const videoId = yt.getVideoData() ? yt.getVideoData().video_id : null;
-
-            if (videoId !== s.id) {
-                pendingSeek = s.start_at || 0;
-                yt.loadVideoById({
-                    videoId: s.id,
-                    startSeconds: pendingSeek
-                });
-            } else {
-                if (Math.abs(yt.getCurrentTime() - s.start_at) > 3) {
-                    yt.seekTo(s.start_at, true);
-                }
-
-                // Ensure correct play/pause state
-                const playerState = yt.getPlayerState();
-                if (s.is_playing && playerState !== YT.PlayerState.PLAYING) {
-                    yt.playVideo();
-                } else if (!s.is_playing && playerState === YT.PlayerState.PLAYING) {
-                    yt.pauseVideo();
-                }
-            }
-
-            // Re-apply pause if needed (sometimes loadVideoById starts playing)
-            if (!s.is_playing) {
-                setTimeout(() => {
-                    if (ready) yt.pauseVideo();
-                }, 500);
-            }
+            // This is now mostly handled by the now_playing socket listener above,
+            // but called on onReady initial load.
+            if (!s) return;
+            updateServerState(s.start_at, s.is_playing);
+            yt.loadVideoById({ videoId: s.id, startSeconds: s.start_at });
+            lastSeekTime = Date.now();
         }
 
         socket.on('toggle_play', d => {
-            if (!ready) return;
-            d.is_playing ? yt.playVideo() : yt.pauseVideo();
-            document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', d.is_playing ? 'pause' : 'play');
+            if (isHost) return; // Hosts ignore, they drive
+            if (serverState) {
+                serverState.isPlaying = d.is_playing;
+                serverState.receivedAt = Date.now(); // Reset sync base
+            }
         });
 
         socket.on('sync_seek', d => {
-            if (!ready) return;
+            if (isHost) return;
+            // Force seek update immediately
+            if (serverState) {
+                serverState.time = d.time;
+                serverState.receivedAt = Date.now();
+            }
             yt.seekTo(d.time, true);
-        });
-
-        socket.on('sync_update', d => {
-            if (!ready || isHost) return;
-
-            // Auto-correct playback state
-            if (d.is_playing) {
-                const state = yt.getPlayerState();
-                if (state !== YT.PlayerState.PLAYING && state !== YT.PlayerState.BUFFERING) {
-                    yt.playVideo();
-                }
-            } else {
-                if (yt.getPlayerState() === YT.PlayerState.PLAYING) {
-                    yt.pauseVideo();
-                }
-            }
-
-            // Auto-correct time drift > 2 seconds
-            const diff = Math.abs(yt.getCurrentTime() - d.time);
-            if (diff > 2) {
-                console.log('Syncing drift:', diff);
-                yt.seekTo(d.time, true);
-            }
         });
 
         socket.on('queue_updated', q => {
@@ -1116,16 +1150,6 @@
                     onStateChange: e => {
                         playing = (e.data === 1);
                         setMusicState(playing);
-
-                        // Force seek if needed when playback starts
-                        if (playing && pendingSeek !== null) {
-                            if (Math.abs(yt.getCurrentTime() - pendingSeek) > 1) {
-                                console.log('Force seeking to:', pendingSeek);
-                                yt.seekTo(pendingSeek, true);
-                            }
-                            pendingSeek = null;
-                        }
-
                         if (e.data === 0) socket.emit('song_ended');
                     }
                 }
