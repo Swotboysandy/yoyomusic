@@ -566,6 +566,99 @@
                 padding: 12px 15px;
                 font-size: 14px;
             }
+
+            /* Mobile Tab Navigation */
+            .mobile-nav {
+                display: flex !important;
+            }
+
+            .left-col,
+            .right-col {
+                display: none;
+            }
+
+            .left-col.active,
+            .right-col.active {
+                display: block;
+            }
+
+            .mobile-content {
+                display: block;
+            }
+
+            .grid {
+                display: block;
+            }
+
+            .player-overlay {
+                bottom: 70px;
+            }
+
+            .main {
+                padding-bottom: 180px;
+            }
+        }
+
+        /* Mobile Nav Bar - Hidden on Desktop */
+        .mobile-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 999;
+            padding: 8px 0;
+            padding-bottom: env(safe-area-inset-bottom, 8px);
+        }
+
+        .mobile-nav-inner {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .mobile-nav-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 10px;
+            padding: 8px 16px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .mobile-nav-btn ion-icon {
+            font-size: 22px;
+        }
+
+        .mobile-nav-btn.active {
+            color: #def92e;
+        }
+
+        .mobile-nav-btn {
+            position: relative;
+        }
+
+        .unread-dot {
+            position: absolute;
+            top: 4px;
+            right: 12px;
+            width: 8px;
+            height: 8px;
+            background: #ff4757;
+            border-radius: 50%;
+            display: none;
+        }
+
+        .unread-dot.show {
+            display: block;
         }
     </style>
 </head>
@@ -664,6 +757,40 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Mobile: Listeners Tab Content (hidden on desktop, shown when tab active) -->
+            <div class="mobile-tab-content" id="tab-listeners" style="display:none;">
+                <div class="section glass-premium">
+                    <div class="section-header"><span class="section-title">Listeners</span></div>
+                    <div id="user_list_mobile" class="song-list"></div>
+                    <div class="reaction-bar" style="margin-top:20px;">
+                        <button class="reaction-btn" onclick="sendReaction('🔥')">🔥</button>
+                        <button class="reaction-btn" onclick="sendReaction('❤️')">❤️</button>
+                        <button class="reaction-btn" onclick="sendReaction('👏')">👏</button>
+                        <button class="reaction-btn" onclick="sendReaction('😂')">😂</button>
+                        <button class="reaction-btn" onclick="sendReaction('🤩')">🤩</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mobile: Chat Tab Content -->
+            <div class="mobile-tab-content" id="tab-chat" style="display:none;">
+                <div class="section glass-premium" style="padding:0;">
+                    <div class="chat-container" style="height:calc(100vh - 280px);">
+                        <div class="section-header" style="padding:15px 20px;margin-bottom:0;">
+                            <span class="section-title">Live Chat</span>
+                        </div>
+                        <div id="chat_messages_mobile" class="chat-messages"></div>
+                        <div style="padding:15px;border-top:1px solid rgba(255,255,255,0.05);display:flex;gap:8px;">
+                            <input type="text" id="chat_input_mobile" class="glass-input"
+                                style="padding:10px 15px;font-size:13px;" placeholder="Message..."
+                                onkeydown="if(event.key==='Enter')sendMessageMobile()">
+                            <button class="neon-btn primary" onclick="sendMessageMobile()"
+                                style="padding:0 15px;"><ion-icon name="send"></ion-icon></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
 
@@ -692,6 +819,29 @@
 
     <div id="player"></div>
     <div class="toast" id="toast"></div>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-nav">
+        <div class="mobile-nav-inner">
+            <button class="mobile-nav-btn active" onclick="switchTab('queue')">
+                <ion-icon name="list-outline"></ion-icon>
+                <span>Queue</span>
+            </button>
+            <button class="mobile-nav-btn" onclick="switchTab('chat')" id="chat-tab-btn">
+                <span class="unread-dot" id="chat-unread"></span>
+                <ion-icon name="chatbubble-outline"></ion-icon>
+                <span>Chat</span>
+            </button>
+            <button class="mobile-nav-btn" onclick="switchTab('listeners')">
+                <ion-icon name="people-outline"></ion-icon>
+                <span>Listeners</span>
+            </button>
+            <button class="mobile-nav-btn" onclick="location.href='/'">
+                <ion-icon name="home-outline"></ion-icon>
+                <span>Lobby</span>
+            </button>
+        </div>
+    </nav>
 
     <script src="/static/effects.js"></script>
     <script>
@@ -808,25 +958,6 @@
                     }
                 });
             }
-        });
-
-        socket.on('user_list', users => {
-            document.getElementById('user_count').textContent = users.length;
-            document.getElementById('user_list').innerHTML = users.map(u => `
-                <div style="font-size:13px;padding:5px 0;display:flex;align-items:center;gap:10px;">
-                    <div class="avatar sm" style="background:${getAvatarColor(u.username)}">${u.username.charAt(0).toUpperCase()}</div>
-                    <div style="display:flex;align-items:center;">
-                        ${u.is_host ? '<span class="host-crown" title="Host">👑</span>' : ''}
-                        <span>${esc(u.username)}</span>
-                    </div>
-                </div>
-            `).join('');
-        });
-
-        socket.on('new_message', d => appendMsg(d));
-        socket.on('chat_history', h => {
-            document.getElementById('chat_messages').innerHTML = '';
-            h.forEach(appendMsg);
         });
 
         socket.on('status', m => showToast(m));
@@ -949,6 +1080,85 @@
 
         function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
         function fmt(s) { const m = Math.floor(s / 60); return m + ':' + Math.floor(s % 60).toString().padStart(2, '0'); }
+
+        // Mobile Tab Switching
+        let currentTab = 'queue';
+        function switchTab(tab) {
+            currentTab = tab;
+
+            // Update button states
+            document.querySelectorAll('.mobile-nav-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Hide all tab content
+            document.querySelectorAll('.mobile-tab-content').forEach(el => el.style.display = 'none');
+            document.querySelector('.left-col').style.display = 'none';
+
+            // Show selected tab
+            if (tab === 'queue') {
+                document.querySelector('.left-col').style.display = 'block';
+            } else if (tab === 'chat') {
+                document.getElementById('tab-chat').style.display = 'block';
+                document.getElementById('chat-unread').classList.remove('show');
+            } else if (tab === 'listeners') {
+                document.getElementById('tab-listeners').style.display = 'block';
+            }
+        }
+
+        // Sync mobile chat and user list
+        socket.on('user_list', users => {
+            const html = users.map(u => `
+                <div style="font-size:13px;padding:5px 0;display:flex;align-items:center;gap:10px;">
+                    <div class="avatar sm" style="background:${getAvatarColor(u.username)}">${u.username.charAt(0).toUpperCase()}</div>
+                    <div style="display:flex;align-items:center;">
+                        ${u.is_host ? '<span class="host-crown" title="Host">👑</span>' : ''}
+                        <span>${esc(u.username)}</span>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('user_list').innerHTML = html;
+            document.getElementById('user_list_mobile').innerHTML = html;
+            document.getElementById('user_count').textContent = users.length;
+        });
+
+        socket.on('new_message', d => {
+            appendMsg(d);
+            appendMsgMobile(d);
+            // Show unread dot if not on chat tab
+            if (currentTab !== 'chat' && window.innerWidth <= 600) {
+                document.getElementById('chat-unread').classList.add('show');
+            }
+        });
+
+        socket.on('chat_history', h => {
+            document.getElementById('chat_messages').innerHTML = '';
+            document.getElementById('chat_messages_mobile').innerHTML = '';
+            h.forEach(d => {
+                appendMsg(d);
+                appendMsgMobile(d);
+            });
+        });
+
+        function appendMsgMobile(d) {
+            const c = document.getElementById('chat_messages_mobile');
+            const div = document.createElement('div');
+            div.className = 'chat-msg';
+            div.innerHTML = `
+                <div class="avatar sm" style="background:${getAvatarColor(d.username)}">${d.username.charAt(0).toUpperCase()}</div>
+                <div>
+                    <div class="chat-name">${esc(d.username)}</div>
+                    <div class="chat-text">${esc(d.message)}</div>
+                </div>`;
+            c.appendChild(div);
+            c.scrollTop = c.scrollHeight;
+        }
+
+        function sendMessageMobile() {
+            const i = document.getElementById('chat_input_mobile');
+            if (!i.value.trim()) return;
+            socket.emit('send_message', { message: i.value });
+            i.value = '';
+        }
 
         // PWA SW
         if ('serviceWorker' in navigator) {
