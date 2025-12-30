@@ -1140,7 +1140,7 @@
             }, 500);
             setInterval(() => {
                 if (ready && playing && isHost) {
-                    socket.emit('sync_time', { time: yt.getCurrentTime(), is_playing: True });
+                    socket.emit('sync_time', { time: yt.getCurrentTime(), is_playing: true });
                 }
             }, 2000);
         }
