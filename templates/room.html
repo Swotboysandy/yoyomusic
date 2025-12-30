@@ -1013,9 +1013,10 @@
             const videoId = yt.getVideoData() ? yt.getVideoData().video_id : null;
 
             if (videoId !== s.id) {
+                pendingSeek = s.start_at || 0;
                 yt.loadVideoById({
                     videoId: s.id,
-                    startSeconds: s.start_at || 0
+                    startSeconds: pendingSeek
                 });
             } else {
                 if (Math.abs(yt.getCurrentTime() - s.start_at) > 3) {
@@ -1115,11 +1116,17 @@
                     onStateChange: e => {
                         playing = (e.data === 1);
                         setMusicState(playing);
+
+                        // Force seek if needed when playback starts
+                        if (playing && pendingSeek !== null) {
+                            if (Math.abs(yt.getCurrentTime() - pendingSeek) > 1) {
+                                console.log('Force seeking to:', pendingSeek);
+                                yt.seekTo(pendingSeek, true);
+                            }
+                            pendingSeek = null;
+                        }
+
                         if (e.data === 0) socket.emit('song_ended');
-                    },
-                    onError: e => {
-                        console.error('Player error:', e.data);
-                        showToast('Video error: ' + e.data);
                     }
                 }
             });
