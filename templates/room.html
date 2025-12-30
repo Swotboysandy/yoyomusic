@@ -611,7 +611,7 @@
 
             .main {
                 padding: 0 10px;
-                padding-bottom: 160px;
+                padding-bottom: 240px;
                 min-height: calc(100vh - 80px);
             }
 
@@ -629,6 +629,24 @@
                 max-height: calc(100vh - 380px);
                 overflow-y: auto;
             }
+
+            .chat-msg .chat-user {
+                font-size: 10px;
+            }
+
+            .chat-msg .chat-text {
+                font-size: 12px;
+            }
+
+            /* Visible scrollbar for mobile chat */
+            .chat-messages::-webkit-scrollbar {
+                width: 4px;
+            }
+
+            .chat-messages::-webkit-scrollbar-thumb {
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+            }
         }
 
         /* Mobile Nav Bar - Hidden on Desktop */
@@ -638,6 +656,7 @@
             bottom: 0;
             left: 0;
             right: 0;
+            width: 100%;
             background: rgba(15, 15, 15, 0.98);
             backdrop-filter: blur(20px);
             border-top: 1px solid rgba(255, 255, 255, 0.1);
@@ -650,6 +669,7 @@
             display: flex;
             justify-content: stretch;
             align-items: center;
+            width: 100%;
         }
 
         .mobile-nav-btn {
@@ -810,17 +830,18 @@
             <!-- Mobile: Chat Tab Content -->
             <div class="mobile-tab-content" id="tab-chat" style="display:none;">
                 <div class="section glass-premium" style="padding:0;">
-                    <div class="chat-container" style="height:calc(100vh - 280px);">
+                    <div class="chat-container" style="height:calc(100vh - 340px);">
                         <div class="section-header" style="padding:15px 20px;margin-bottom:0;">
                             <span class="section-title">Live Chat</span>
                         </div>
                         <div id="chat_messages_mobile" class="chat-messages"></div>
-                        <div style="padding:15px;border-top:1px solid rgba(255,255,255,0.05);display:flex;gap:8px;">
+                        <div
+                            style="padding:12px; margin: 0 12px 15px 12px; border:1px solid rgba(255,255,255,0.1); display:flex; gap:8px; background:rgba(255,255,255,0.05); backdrop-filter:blur(15px); border-radius:16px;">
                             <input type="text" id="chat_input_mobile" class="glass-input"
-                                style="padding:10px 15px;font-size:13px;" placeholder="Message..."
-                                onkeydown="if(event.key==='Enter')sendMessageMobile()">
+                                style="padding:10px 15px; font-size:13px; background:rgba(255,255,255,0.05); border:none;"
+                                placeholder="Message..." onkeydown="if(event.key==='Enter')sendMessageMobile()">
                             <button class="neon-btn primary" onclick="sendMessageMobile()"
-                                style="padding:0 15px;"><ion-icon name="send"></ion-icon></button>
+                                style="padding:0 15px; border-radius:12px;"><ion-icon name="send"></ion-icon></button>
                         </div>
                     </div>
                 </div>
@@ -842,6 +863,8 @@
                 <button class="neon-btn" onclick="socket.emit('toggle_repeat')" title="Repeat" id="repeat_btn"><ion-icon
                         name="repeat-outline"></ion-icon></button>
                 <button class="neon-btn" onclick="toggle()" id="play_btn"><ion-icon name="play"></ion-icon></button>
+                <button class="neon-btn" onclick="location.reload()" title="Refresh Player"><ion-icon
+                        name="refresh-outline"></ion-icon></button>
                 <button class="neon-btn" onclick="vote()" title="Vote Skip"><ion-icon
                         name="play-skip-forward-outline"></ion-icon></button>
             </div>
@@ -1159,8 +1182,9 @@
             appendMsg(d);
             appendMsgMobile(d);
             // Show unread dot if not on chat tab
-            if (currentTab !== 'chat' && window.innerWidth <= 600) {
-                document.getElementById('chat-unread').classList.add('show');
+            if (currentTab !== 'chat') {
+                const unread = document.getElementById('chat-unread');
+                if (unread) unread.classList.add('show');
             }
         });
 
@@ -1176,13 +1200,15 @@
         function appendMsgMobile(d) {
             const c = document.getElementById('chat_messages_mobile');
             const div = document.createElement('div');
-            div.className = 'chat-msg';
+            div.className = 'chat-msg' + (d.username === username ? ' self' : '');
+
             div.innerHTML = `
-                <div class="avatar sm" style="background:${getAvatarColor(d.username)}">${d.username.charAt(0).toUpperCase()}</div>
-                <div>
-                    <div class="chat-name">${esc(d.username)}</div>
-                    <div class="chat-text">${esc(d.message)}</div>
-                </div>`;
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:1px;">
+                    <div class="avatar sm" style="background:${getAvatarColor(d.username)}; width:14px; height:14px; font-size:7px;">${d.username.charAt(0).toUpperCase()}</div>
+                    <div class="chat-user" style="font-size:9px; color:#666;">${esc(d.username)} • ${d.time}</div>
+                </div>
+                <div class="chat-text">${esc(d.message)}</div>
+            `;
             c.appendChild(div);
             c.scrollTop = c.scrollHeight;
         }
