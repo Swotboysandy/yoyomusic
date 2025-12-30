@@ -1050,6 +1050,29 @@
             yt.seekTo(d.time, true);
         });
 
+        socket.on('sync_update', d => {
+            if (!ready || isHost) return;
+
+            // Auto-correct playback state
+            if (d.is_playing) {
+                const state = yt.getPlayerState();
+                if (state !== YT.PlayerState.PLAYING && state !== YT.PlayerState.BUFFERING) {
+                    yt.playVideo();
+                }
+            } else {
+                if (yt.getPlayerState() === YT.PlayerState.PLAYING) {
+                    yt.pauseVideo();
+                }
+            }
+
+            // Auto-correct time drift > 2 seconds
+            const diff = Math.abs(yt.getCurrentTime() - d.time);
+            if (diff > 2) {
+                console.log('Syncing drift:', diff);
+                yt.seekTo(d.time, true);
+            }
+        });
+
         socket.on('queue_updated', q => {
             const el = document.getElementById('queue_list');
             document.getElementById('queue_count').textContent = q.length + ' songs';

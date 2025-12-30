@@ -553,6 +553,12 @@ def handle_sync_time(data):
                 'time': room.playback_time,
                 'ts': time.time()
             }
+        
+        # Broadcast sync to others so they don't fall behind
+        socketio.emit('sync_update', {
+            'time': room.playback_time,
+            'is_playing': room.is_playing
+        }, room=room_id, skip_sid=sid)
 
 @socketio.on('song_ended')
 def handle_song_ended():
