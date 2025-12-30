@@ -238,6 +238,12 @@
             setTimeout(() => t.classList.remove('show'), 3000);
         }
 
+        function esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
         // Load saved username
         const saved = localStorage.getItem('yoyo_username');
         if (saved) document.getElementById('username').value = saved;
