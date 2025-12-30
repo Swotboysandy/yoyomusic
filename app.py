@@ -362,8 +362,6 @@ def handle_send_message(data):
     }
     emit('new_message', msg_data, room=room_id)
 
-    socketio.emit('new_reaction', {'userId': sid, 'emoji': emoji}, room=room_id)
-
 @socketio.on('send_reaction')
 def handle_reaction(data):
     sid = request.sid
@@ -502,6 +500,7 @@ def handle_vote_skip():
     if room_id not in active_rooms:
         return
     
+    state = active_rooms[room_id]
     is_host = state.get('host_sid') == sid
     state['vote_skip'].add(sid)
     
@@ -509,10 +508,10 @@ def handle_vote_skip():
     current_votes = len(state['vote_skip'])
     
     if is_host or current_votes >= votes_needed:
-        emit('status', "Skipped", room=room_id)
+        socketio.emit('status', "Skipped", room=room_id)
         play_next_song_in_room(room_id)
     else:
-        emit('status', f"Skip: {current_votes}/{votes_needed}", room=room_id)
+        socketio.emit('status', f"Skip: {current_votes}/{votes_needed}", room=room_id)
 
 @socketio.on('play_pause')
 def handle_play_pause():

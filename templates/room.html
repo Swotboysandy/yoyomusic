@@ -582,20 +582,42 @@
                 display: block;
             }
 
-            .mobile-content {
-                display: block;
+            .mobile-tab-content {
+                min-height: calc(100vh - 250px);
+            }
+
+            .mobile-tab-content .section {
+                min-height: calc(100vh - 280px);
             }
 
             .grid {
                 display: block;
+                min-height: calc(100vh - 200px);
             }
 
             .player-overlay {
-                bottom: 70px;
+                bottom: 65px;
             }
 
             .main {
-                padding-bottom: 180px;
+                padding: 0 10px;
+                padding-bottom: 160px;
+                min-height: calc(100vh - 80px);
+            }
+
+            .header {
+                margin: 8px;
+                padding: 10px 12px;
+            }
+
+            .section {
+                margin-bottom: 10px;
+            }
+
+            #queue_list,
+            #search_results {
+                max-height: calc(100vh - 380px);
+                overflow-y: auto;
             }
         }
 
