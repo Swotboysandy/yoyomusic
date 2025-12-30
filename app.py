@@ -131,6 +131,13 @@ def handle_join_room(data):
     active_rooms[room_id]['users'][sid] = username
     users[sid] = {'username': username, 'room_id': room_id, 'is_host': active_rooms[room_id]['host_sid'] == sid}
     
+    # Calculate estimated playback time for better sync
+    current_pos = room.playback_time
+    if room.is_playing and 'last_sync' in active_rooms[room_id]:
+        import time
+        elapsed = time.time() - active_rooms[room_id]['last_sync']['ts']
+        current_pos += elapsed
+
     emit('joined_room', {
         'room_id': room_id,
         'room_name': room.name,
@@ -138,8 +145,6 @@ def handle_join_room(data):
         'is_host': users[sid]['is_host'],
         'theme': room.theme
     })
-    
-    
     
     # Send queue & current song
     queue = [{'id': s.yt_id, 'title': s.title, 'channel': s.channel, 'added_by': s.added_by, 'uuid': s.uuid} 
@@ -150,7 +155,7 @@ def handle_join_room(data):
         emit('now_playing', {
             'id': room.current_song_id,
             'title': room.current_song_title,
-            'start_at': room.playback_time,
+            'start_at': current_pos,
             'is_playing': room.is_playing
         })
     
@@ -170,7 +175,8 @@ def handle_join_room(data):
     for u_sid, u_name in active_rooms[room_id]['users'].items():
         user_data.append({
             'username': u_name,
-            'is_host': active_rooms[room_id]['host_sid'] == u_sid
+            'is_host': active_rooms[room_id]['host_sid'] == u_sid,
+            'sid': u_sid
         })
     socketio.emit('user_list', user_data, room=room_id)
     socketio.emit('room_list', get_room_list())
@@ -212,7 +218,8 @@ def leave_user_from_room(sid, room_id):
     for u_sid, u_name in room_state['users'].items():
         user_data.append({
             'username': u_name,
-            'is_host': room_state['host_sid'] == u_sid
+            'is_host': room_state['host_sid'] == u_sid,
+            'sid': u_sid
         })
     socketio.emit('user_list', user_data, room=room_id)
     emit('status', f"{username} left", room=room_id)
@@ -538,6 +545,14 @@ def handle_sync_time(data):
         room.playback_time = data.get('time', 0)
         room.is_playing = data.get('is_playing', True)
         db.session.commit()
+        
+        # Track last sync in memory for new joiners
+        import time
+        if room_id in active_rooms:
+            active_rooms[room_id]['last_sync'] = {
+                'time': room.playback_time,
+                'ts': time.time()
+            }
 
 @socketio.on('song_ended')
 def handle_song_ended():

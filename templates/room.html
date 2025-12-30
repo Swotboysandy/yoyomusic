@@ -305,6 +305,14 @@
             max-width: 500px;
             padding: 0 20px;
             z-index: 1000;
+            pointer-events: none;
+            /* Allow clicking items behind the overlay empty space */
+        }
+
+        .player-card,
+        .prog-bar {
+            pointer-events: auto;
+            /* Enable clicks only on the actual player elements */
         }
 
         .player-card {
@@ -339,13 +347,24 @@
 
         .prog-bar {
             position: absolute;
-            top: -10px;
+            top: -16px;
             left: 40px;
             right: 40px;
-            height: 4px;
+            height: 6px;
             background: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
+            border-radius: 3px;
             cursor: pointer;
+            z-index: 1001;
+        }
+
+        /* Increase touch hit area for progress bar */
+        .prog-bar::before {
+            content: '';
+            position: absolute;
+            top: -15px;
+            bottom: -15px;
+            left: 0;
+            right: 0;
         }
 
         .prog-fill {
@@ -359,12 +378,13 @@
         .prog-fill::after {
             content: '';
             position: absolute;
-            right: -4px;
-            top: -3px;
-            width: 10px;
-            height: 10px;
+            right: -6px;
+            top: -4px;
+            width: 14px;
+            height: 14px;
             background: #fff;
             border-radius: 50%;
+            box-shadow: 0 0 10px rgba(222, 249, 46, 0.5);
         }
 
         .toast {
@@ -550,7 +570,16 @@
             }
 
             .player-controls .neon-btn {
-                padding: 8px 12px;
+                padding: 10px;
+                min-width: 44px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .player-controls .neon-btn ion-icon {
+                font-size: 22px;
             }
 
             .prog-bar {
@@ -850,7 +879,7 @@
     </main>
 
     <div class="player-overlay">
-        <div class="prog-bar" onclick="seek(event)">
+        <div class="prog-bar" id="prog_bar_el">
             <div id="progress" class="prog-fill"></div>
         </div>
         <div class="player-card glass-premium">
@@ -863,7 +892,7 @@
                 <button class="neon-btn" onclick="socket.emit('toggle_repeat')" title="Repeat" id="repeat_btn"><ion-icon
                         name="repeat-outline"></ion-icon></button>
                 <button class="neon-btn" onclick="toggle()" id="play_btn"><ion-icon name="play"></ion-icon></button>
-                <button class="neon-btn" onclick="location.reload()" title="Refresh Player"><ion-icon
+                <button class="neon-btn" onclick="refreshPlayer()" title="Refresh Player"><ion-icon
                         name="refresh-outline"></ion-icon></button>
                 <button class="neon-btn" onclick="vote()" title="Vote Skip"><ion-icon
                         name="play-skip-forward-outline"></ion-icon></button>
@@ -880,16 +909,16 @@
     <!-- Mobile Bottom Navigation -->
     <nav class="mobile-nav">
         <div class="mobile-nav-inner">
-            <button class="mobile-nav-btn active" onclick="switchTab('queue')">
+            <button class="mobile-nav-btn active" onclick="switchTab('queue', this)">
                 <ion-icon name="list-outline"></ion-icon>
                 <span>Queue</span>
             </button>
-            <button class="mobile-nav-btn" onclick="switchTab('chat')" id="chat-tab-btn">
+            <button class="mobile-nav-btn" onclick="switchTab('chat', this)" id="chat-tab-btn">
                 <span class="unread-dot" id="chat-unread"></span>
                 <ion-icon name="chatbubble-outline"></ion-icon>
                 <span>Chat</span>
             </button>
-            <button class="mobile-nav-btn" onclick="switchTab('listeners')">
+            <button class="mobile-nav-btn" onclick="switchTab('listeners', this)">
                 <ion-icon name="people-outline"></ion-icon>
                 <span>Listeners</span>
             </button>
@@ -907,6 +936,7 @@
         const roomId = window.location.pathname.split('/').pop();
         const username = localStorage.getItem('yoyo_username') || 'Guest';
         let isHost = false;
+        let currentSongState = null;
 
         socket.on('connect', () => {
             const params = new URLSearchParams(window.location.search);
@@ -965,20 +995,49 @@
                 // Update play/pause button icon
                 document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', s.is_playing ? 'pause' : 'play');
 
+                currentSongState = s;
                 if (ready) {
-                    if (yt.getVideoData().video_id !== s.id) {
-                        yt.loadVideoById({ videoId: s.id, startSeconds: s.start_at || 0 });
-                    } else if (Math.abs(yt.getCurrentTime() - s.start_at) > 3) {
-                        yt.seekTo(s.start_at, true);
-                    }
-                    if (!s.is_playing) setTimeout(() => yt.pauseVideo(), 500);
+                    applySongState(s);
                 }
             } else {
+                currentSongState = null;
                 document.getElementById('player_title').textContent = 'Not playing';
                 document.getElementById('play_btn').querySelector('ion-icon').setAttribute('name', 'play');
                 if (ready) yt.stopVideo();
             }
         });
+
+        function applySongState(s) {
+            if (!s || !ready) return;
+
+            const videoId = yt.getVideoData() ? yt.getVideoData().video_id : null;
+
+            if (videoId !== s.id) {
+                yt.loadVideoById({
+                    videoId: s.id,
+                    startSeconds: s.start_at || 0
+                });
+            } else {
+                if (Math.abs(yt.getCurrentTime() - s.start_at) > 3) {
+                    yt.seekTo(s.start_at, true);
+                }
+
+                // Ensure correct play/pause state
+                const playerState = yt.getPlayerState();
+                if (s.is_playing && playerState !== YT.PlayerState.PLAYING) {
+                    yt.playVideo();
+                } else if (!s.is_playing && playerState === YT.PlayerState.PLAYING) {
+                    yt.pauseVideo();
+                }
+            }
+
+            // Re-apply pause if needed (sometimes loadVideoById starts playing)
+            if (!s.is_playing) {
+                setTimeout(() => {
+                    if (ready) yt.pauseVideo();
+                }, 500);
+            }
+        }
 
         socket.on('toggle_play', d => {
             if (!ready) return;
@@ -1024,11 +1083,20 @@
             yt = new YT.Player('player', {
                 height: '0', width: '0',
                 events: {
-                    onReady: () => { ready = true; },
+                    onReady: () => {
+                        ready = true;
+                        yt.setVolume(100);
+                        yt.unMute();
+                        if (currentSongState) applySongState(currentSongState);
+                    },
                     onStateChange: e => {
                         playing = (e.data === 1);
                         setMusicState(playing);
                         if (e.data === 0) socket.emit('song_ended');
+                    },
+                    onError: e => {
+                        console.error('Player error:', e.data);
+                        showToast('Video error: ' + e.data);
                     }
                 }
             });
@@ -1041,8 +1109,10 @@
                 }
             }, 500);
             setInterval(() => {
-                if (ready && playing) socket.emit('sync_time', { time: yt.getCurrentTime(), is_playing: true });
-            }, 4000);
+                if (ready && playing && isHost) {
+                    socket.emit('sync_time', { time: yt.getCurrentTime(), is_playing: True });
+                }
+            }, 2000);
         }
 
         // Helpers
@@ -1069,12 +1139,91 @@
         function remove(u) { socket.emit('remove_from_queue', { uuid: u }); }
         function toggle() { socket.emit('play_pause'); }
         function vote() { socket.emit('vote_skip'); }
-        function seek(e) {
-            if (!ready) return;
-            const r = e.currentTarget.getBoundingClientRect();
-            const newTime = yt.getDuration() * ((e.clientX - r.left) / r.width);
-            yt.seekTo(newTime);
-            socket.emit('seek_to', { time: newTime });
+        let seekBarInitialized = false;
+        function initSeekBar() {
+            if (seekBarInitialized) return;
+            const bar = document.getElementById('prog_bar_el');
+            if (!bar) return;
+            let isDragging = false;
+            seekBarInitialized = true;
+
+            const updateSeek = (e) => {
+                if (!ready) return;
+                const r = bar.getBoundingClientRect();
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                if (clientX === undefined) return;
+
+                let pos = (clientX - r.left) / r.width;
+                pos = Math.max(0, Math.min(1, pos));
+
+                const newTime = yt.getDuration() * pos;
+                document.getElementById('progress').style.width = (pos * 100) + '%';
+                document.getElementById('time_cur').textContent = fmt(newTime);
+
+                return newTime;
+            };
+
+            bar.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                const newTime = updateSeek(e);
+                if (newTime !== undefined) {
+                    yt.seekTo(newTime, false);
+                }
+            });
+
+            bar.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                const newTime = updateSeek(e);
+                if (newTime !== undefined) {
+                    yt.seekTo(newTime, false);
+                }
+            }, { passive: false });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                updateSeek(e);
+            });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                updateSeek(e);
+            }, { passive: false });
+
+            const stopDragging = (e) => {
+                if (!isDragging) return;
+                isDragging = false;
+                const newTime = updateSeek(e);
+                if (newTime !== undefined) {
+                    yt.seekTo(newTime, true);
+                    socket.emit('seek_to', { time: newTime });
+                }
+            };
+
+            window.addEventListener('mouseup', stopDragging);
+            window.addEventListener('touchend', stopDragging);
+        }
+
+        // Call after joined_room
+        socket.on('joined_room', data => {
+            document.getElementById('room_name_display').textContent = '• ' + data.room_name;
+            isHost = data.is_host;
+            updateRoomUI(data);
+            initEffects('waves-canvas');
+            initSeekBar(); // Initialize seek functionality
+        });
+
+        function refreshPlayer() {
+            if (currentSongState && ready) {
+                // Force a reload of the current video
+                const s = currentSongState;
+                yt.loadVideoById({
+                    videoId: s.id,
+                    startSeconds: yt.getCurrentTime() // Sync from current local time of the room
+                });
+                showToast('Refreshing player...');
+            } else {
+                location.reload();
+            }
         }
 
         function sendMessage() {
@@ -1140,16 +1289,18 @@
 
         // Mobile Tab Switching
         let currentTab = 'queue';
-        function switchTab(tab) {
+        function switchTab(tab, btn) {
             currentTab = tab;
 
             // Update button states
-            document.querySelectorAll('.mobile-nav-btn').forEach(btn => btn.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            document.querySelectorAll('.mobile-nav-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            else if (event && event.currentTarget) event.currentTarget.classList.add('active');
 
             // Hide all tab content
             document.querySelectorAll('.mobile-tab-content').forEach(el => el.style.display = 'none');
-            document.querySelector('.left-col').style.display = 'none';
+            const leftCol = document.querySelector('.left-col');
+            if (leftCol) leftCol.style.display = 'none';
 
             // Show selected tab
             if (tab === 'queue') {
@@ -1164,6 +1315,13 @@
 
         // Sync mobile chat and user list
         socket.on('user_list', users => {
+            // Update local host status using socket ID
+            const me = users.find(u => u.sid === socket.id);
+            if (me) {
+                isHost = me.is_host;
+                updateRoomUI({ is_host: isHost });
+            }
+
             const html = users.map(u => `
                 <div style="font-size:13px;padding:5px 0;display:flex;align-items:center;gap:10px;">
                     <div class="avatar sm" style="background:${getAvatarColor(u.username)}">${u.username.charAt(0).toUpperCase()}</div>
