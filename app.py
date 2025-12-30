@@ -25,7 +25,8 @@ def create_room_data(name, password=None):
         'playback_time': 0,  # Current playback position in seconds
         'is_playing': True,
         'vote_skip': set(),
-        'history': []
+        'history': [],
+        'chat_history': []
     }
 
 @app.route('/')
@@ -110,13 +111,14 @@ def handle_join_room(data):
     emit('user_list', list(room['users'].values()), room=room_id)
     emit('queue_updated', room['queue'], room=room_id)
     
-    # Send current song with playback position for sync
     if room['current_song']:
         emit('now_playing', {
             **room['current_song'],
             'start_at': room['playback_time'],
             'is_playing': room['is_playing']
         })
+    
+    emit('chat_history', room['chat_history'])
     
     emit('status', f"{username} joined", room=room_id)
     
@@ -235,6 +237,55 @@ def add_to_queue(song):
     if not room['current_song']:
         play_next_song_in_room(room_id)
 
+@socketio.on('remove_from_queue')
+def remove_from_queue(data):
+    sid = request.sid
+    if sid not in users or not users[sid].get('room_id'):
+        return
+    
+    room_id = users[sid]['room_id']
+    if room_id not in rooms:
+        return
+    
+    song_uuid = data.get('uuid')
+    if not song_uuid:
+        return
+        
+    room = rooms[room_id]
+    original_len = len(room['queue'])
+    room['queue'] = [s for s in room['queue'] if s.get('uuid') != song_uuid]
+    
+    if len(room['queue']) != original_len:
+        emit('queue_updated', room['queue'], room=room_id)
+        emit('status', "Removed from queue", room=room_id)
+
+@socketio.on('send_message')
+def handle_message(data):
+    sid = request.sid
+    if sid not in users or not users[sid].get('room_id'):
+        return
+    
+    room_id = users[sid]['room_id']
+    username = users[sid]['username']
+    message = data.get('message', '').strip()[:200]
+    
+    if not message:
+        return
+        
+    msg_data = {
+        'username': username,
+        'message': message,
+        'time': datetime.now().strftime('%H:%M'),
+        'sid': sid
+    }
+    
+    if room_id in rooms:
+        rooms[room_id]['chat_history'].append(msg_data)
+        if len(rooms[room_id]['chat_history']) > 100:
+            rooms[room_id]['chat_history'].pop(0)
+            
+        emit('new_message', msg_data, room=room_id)
+
 @socketio.on('vote_skip')
 def vote_to_skip():
     sid = request.sid
@@ -266,7 +317,7 @@ def play_pause():
     room_id = users[sid]['room_id']
     if room_id in rooms:
         rooms[room_id]['is_playing'] = not rooms[room_id]['is_playing']
-    emit('toggle_play', room=room_id)
+        socketio.emit('toggle_play', {'is_playing': rooms[room_id]['is_playing']}, room=room_id)
 
 @socketio.on('sync_time')
 def sync_time(data):
