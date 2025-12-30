@@ -85,6 +85,9 @@
             background: rgba(255, 255, 255, 0.05);
             color: #fff;
             border: 1px solid rgba(255, 255, 255, 0.2);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
         }
 
         .neon-btn.primary {
@@ -95,6 +98,10 @@
         .neon-btn:hover {
             border-color: #fff;
             transform: translateY(-1px);
+        }
+
+        .neon-btn:active {
+            transform: scale(0.97);
         }
 
         .toast {
