@@ -484,6 +484,89 @@
                 opacity: 0;
             }
         }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px 16px;
+                margin: 10px;
+            }
+
+            .header>div {
+                width: 100%;
+                justify-content: center;
+            }
+
+            #host_theme_controls {
+                border-left: none !important;
+                padding-left: 0 !important;
+                margin-left: 0 !important;
+                justify-content: center;
+            }
+
+            .main {
+                padding: 0 10px 140px 10px;
+            }
+
+            .section {
+                padding: 15px;
+            }
+
+            .player-overlay {
+                bottom: 10px;
+                padding: 0 10px;
+            }
+
+            .player-card {
+                padding: 10px 15px;
+                gap: 10px;
+                flex-wrap: wrap;
+                border-radius: 20px;
+            }
+
+            .player-info {
+                order: -1;
+                width: 100%;
+                text-align: center;
+                margin-bottom: 5px;
+            }
+
+            .player-controls {
+                width: 100%;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .player-controls .neon-btn {
+                padding: 8px 12px;
+            }
+
+            .prog-bar {
+                left: 15px;
+                right: 15px;
+            }
+
+            .chat-container {
+                height: 300px;
+            }
+
+            .reaction-bar {
+                flex-wrap: wrap;
+            }
+
+            .reaction-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 16px;
+            }
+
+            .glass-input {
+                padding: 12px 15px;
+                font-size: 14px;
+            }
+        }
     </style>
 </head>
 
