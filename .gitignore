@@ -1,0 +1,30 @@
+
+# Root .gitignore
+
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/.env
+backend/.env.*
+backend/*.pyc
+backend/*.db
+backend/node_modules/
+backend/dist/
+backend/build/
+
+# Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env
+frontend/.env.*
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# General
+.DS_Store
+*.pem
+.vscode/
+.idea/
